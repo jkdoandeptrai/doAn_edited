@@ -2,11 +2,6 @@
 -- - Hệ thống tính toán các dữ liệu chính như: Phí shippers, phí cửa hàng, tổng doanh thu xoay quanh theo tháng và hóa đơn.
 --   các tháng được cập nhật tự động từ built-in function là: GETDATE() và MONTH()
 --   Các thủ tục, truy vấn đều được chuyển sang dưới dạng PROCEDURES và FUNCTIONS ( RETURN TYPE: TABLE )
---   BUG: * Không phân biệt được các tháng của mỗi năm. VD tháng 9 năm 2021 khác với tháng 9 năm 2020
---          đối với hai bảng PhiShipper và PhiCuaHang -> đề xuất thay đổi
---          Xem mục : BUG01 và BUG02
---        * Không nộp được phí cho tháng 12: 
---          Xem mục : BUG03 và BUG04 '
 --   Đề xuất thay đổi database: Thêm cột NAM INT YEAR(GETDATE()) vào bảng PhiShippers và CuaHang
 --   Đã thay đổi: Cột DANH_GIA từ bảng Shippers từ kiểu TINYINT sang DECIMAL(2,1)
 --   Xem thêm file: Interface.sql
@@ -18,12 +13,13 @@
         INSERT INTO 
             PhiCuaHang(P_ID)
             SELECT P_ID from CuaHang 
-                        WHERE MONTH(GETDATE()) > ALL (
+                        WHERE   MONTH(GETDATE()) > ALL (
                                     SELECT THANG FROM PhiCuaHang --- Trường hợp sang tháng mới
-                                ) OR P_ID != ALL (
+                                )  OR YEAR(GETDATE()) > ALL (
+                                    SELECT NAM FROM PhiCuaHang --- Trường hợp sang năm mới
+                                )  OR P_ID != ALL (
                                     SELECT P_ID from PhiCuaHang  --- Trường hợp có thêm CuaHang mới
                                 )
-        ------------Nhược điểm: không phân biệt, cập nhật được được tháng của năm mới:                                                       BUG01
         -------------------------------------------------------------------------------------
     -- -- SELECT * from PhiCuaHang
     -- 2, Shippers
@@ -36,11 +32,12 @@
             SELECT S_ID from Shippers 
                             WHERE MONTH(GETDATE()) > ALL (
                                 SELECT THANG FROM PhiShippers
+                            ) OR YEAR(GETDATE()) > ALL (
+                                SELECT NAM FROM PhiShippers
                             ) OR S_ID != ALL (
                                 SELECT S_ID from PhiShippers
                             )
                 
-        ------------Nhược điểm: không phân biệt, cập nhật được được tháng của năm mới :                                                      BUG02
         -- SELECT * from PhiShippers
 
 
@@ -61,16 +58,23 @@
                         SUM(HoaDon.PHI_SHIP_VND) as TONG_TIEN_SHIP,
                         SUM(HoaDon.PHI_SHIP_VND)*0.3 as PHI_PHAI_TRA,
                         -- Hệ số tính: Lấy 30% tổng số tiền phí ship mà shipper nhận được trong mỗi đơn hàng
-                        MONTH(GETDATE()) as Thang 
+                        MONTH(GETDATE()) as Thang ,
+                        YEAR(GETDATE()) as NAM
                     from HoaDon
-                WHERE HoaDon.TRANG_THAI = N'Đã giao' AND  MONTH(HoaDon.THOI_GIAN_NHAN_HANG) = MONTH(GETDATE()) 
+                WHERE HoaDon.TRANG_THAI = N'Đã giao' 
+                        AND  
+                        MONTH(HoaDon.THOI_GIAN_NHAN_HANG) = MONTH(GETDATE())
+                        AND 
+                        YEAR(HoaDon.THOI_GIAN_NHAN_HANG) = YEAR(GETDATE())
+
                 /*
-                chỉ những đơn hàng "Đã giao" thì hệ thống mới thực sự tính phí cho shipper, nếu đơn hàng ở trạng thái đang giao thì vẫn chưa coi
+                *chỉ những đơn hàng "Đã giao" thì hệ thống mới thực sự tính phí cho shipper, nếu đơn hàng ở trạng thái đang giao thì vẫn chưa coi
                  là một đơn hàng thành công -> shipper vẫn chưa nhận được tiền phí ship.
+                * Điều kiện WHERE nhấn mạnh rằng tiền phí tháng/ năm nào thì phải tính cho shipper ở tháng/ năm đấy
                  */
                 GROUP BY S_ID
                 ) as sSum
-                ON s.S_ID = sSum.S_ID and sSum.Thang = s.THANG
+                ON s.S_ID = sSum.S_ID and sSum.Thang = s.THANG and sSum.NAM = s.NAM
 
 
 
@@ -231,36 +235,47 @@
         ------------------------
     -- 5, Tính doanh thu mỗi(cuối) tháng:
     -- Nộp tiền:
-    --CREATE OR ALTER PROCEDURE NopPhi @ID_Phi TINYINT,@Who CHAR ,@month TINYINT AS
+    --CREATE OR ALTER PROCEDURE NopPhi @ID_Phi TINYINT,@Who CHAR ,@month TINYINT,@year TINYINT AS
     /*
       * @param: @ID_Phi : ID nộp phí trong bảng nộp phí, Shipper = FS_ID; CuaHang = FP_ID
                 @Who    : Chỉ định đối tượng nộp phí: 'S' or 's'-> Shipper; 'P' or 'p' -> CuaHang 
                 @month  : Chỉ định tháng mà đối tượng nộp phí
+                @year   : Chỉ định năm đối tượng đóng: // cần thiết cho năm vì trường hợp sang năm mới thì mới nộp cho tháng 12 năm trước
     */ 
-        DECLARE @check NVARCHAR(10) = ( SELECT TRANG_THAI from PhiShippers WHERE FS_ID = @ID_Phi);
+        DECLARE @check NVARCHAR(10) = ( SELECT TRANG_THAI 
+                                    from PhiShippers 
+                                    WHERE FS_ID = @ID_Phi and THANG = @month
+                                          and NAM = @year;
             -- Nếu @check = '' thì có nghĩa là FS_ID không tồn tại trong hệ thống
-        DECLARE @check1 NVARCHAR(10) = ( SELECT TRANG_THAI from PhiCuaHang WHERE FP_ID = @ID_Phi);
-            -- Nếu @check1 = '' thì có nghĩa là FP_ID không tồn tại trong hệ thống
-        -- @month hợp lệ là số tháng >=1 và phải nhỏ hơn tháng hiện tại
-        IF (@Who = 'S' or @Who = 's') and @check != '' and (@month >=1 AND @month < MONTH(GETDATE()) )                                      -- BUG03    
+        DECLARE @check1 NVARCHAR(10) = ( SELECT TRANG_THAI 
+                                        from PhiCuaHang 
+                                        WHERE FP_ID = @ID_Phi and THANG = @month
+                                              and NAM = @year;
+            -- Nếu @check1 = '' thì có nghĩa là FP_ID không tồn tại trong hệ thống hoặc tháng không hợp lệ
+        -- THƯỜNG xảy ra 3 trường hợp:
+        --                    1: Không tồn tại @thang, @ID_Phi trong database
+        --                    2: @ID_Phi trong @thang đã nộp tiền phí 
+        --                    3: @ID_Phi trong @thang chưa nộp tiền phí 
+
+        IF ( LOWER(@who) = 's' ) and @check != ''                                  
             BEGIN
                 IF @check = N'Chưa nộp'
                     BEGIN
                         UPDATE PhiShippers
-                        SET TRANG_THAI = N'Đã nộp', THOI_GIAN_NOP = GETDATE()
-                        WHERE FS_ID = @ID_Phi and THANG = @month 
+                            SET TRANG_THAI = N'Đã nộp', THOI_GIAN_NOP = GETDATE()
+                        WHERE FS_ID = @ID_Phi and THANG = @month and NAM = @year
                         SELECT N'Đã nộp thành công.' AS SUCCESS
                     END
                 ELSE
                     SELECT N'Bạn đã nộp rồi!' AS SHIPPER_DA_NOP
             END
-        IF (@Who = 'P' or @Who = 'p') and @check1 != '' and (@month >=1 AND @month < MONTH(GETDATE()) )                                     -- BUG04
+        IF (LOWER(@who) = 'p') and @check1 != ''   
             BEGIN
                 IF @check1 = N'Chưa nộp'
                     BEGIN
                         UPDATE PhiCuaHang
-                        SET TRANG_THAI = N'Đã nộp',THOI_GIAN_NOP = GETDATE()
-                        WHERE FP_ID = @ID_Phi and THANG = @month and TRANG_THAI != N'Đã nộp'
+                            SET TRANG_THAI = N'Đã nộp',THOI_GIAN_NOP = GETDATE()
+                        WHERE FP_ID = @ID_Phi and THANG = @month and NAM = @year
                         SELECT N'Đã nộp thành công.' AS SUCCESS
                     END
                 ELSE
@@ -269,15 +284,14 @@
         ELSE
             SELECT N'Có lỗi xảy ra, xin vui lòng thử lại.' AS ERORR
 
-
     --CREATE or ALTER PROCEDURE Monthly_Revenue @thang int AS
 
         SELECT SUM(TONG.TONG) AS TONG_DOANH_THU FROM
             (SELECT SUM(TIEN_PHI_THANG) AS TONG FROM PhiShippers
-                WHERE THANG = @thang AND TRANG_THAI = N'Đã nộp'
+                WHERE THANG = @thang AND TRANG_THAI = N'Đã nộp' and NAM = YEAR(GETDATE())
             UNION
             SELECT SUM(TIEN_PHI_THANG) AS TONG FROM PhiCuaHang
-                WHERE THANG = @thang AND TRANG_THAI = N'Đã nộp'
+                WHERE THANG = @thang AND TRANG_THAI = N'Đã nộp' and NAM = YEAR(GETDATE())
             ) AS TONG
 
 
@@ -305,16 +319,16 @@
 
     -- 2, Đưa ra danh sách các khách hàng, shipper, chưa nộp phí dịch vụ trong tháng
     --- Gồm các shipper + Cửa hàng chưa nộp phí trong những tháng < @thang
-    --CREATE OR ALTER FUNCTION TON_NO(@thang INT)
+    --CREATE OR ALTER FUNCTION TON_NO(@thang INT,@year TINYNT)
     --RETURNS TABLE 
     --AS  
         RETURN
             SELECT PHI_ID,bang1.ID,TEN,THANG
             from
                 (
-                Select FS_ID AS PHI_ID,S_ID AS ID,THANG,TRANG_THAI from PhiShippers
+                Select FS_ID AS PHI_ID,S_ID AS ID,THANG,NAM,TRANG_THAI from PhiShippers
                 UNION
-                SELECt FP_ID AS PHI_ID, P_ID AS ID,THANG,TRANG_THAI FROM PhiCuaHang
+                SELECt FP_ID AS PHI_ID, P_ID AS ID,THANG,NAM,TRANG_THAI FROM PhiCuaHang
                 )
                 AS bang1
                 INNER JOIN
@@ -324,7 +338,7 @@
                 SELECT P_ID,TEN_CUA_HANG from CuaHang
                 ) AS bang2
                 ON bang1.ID = bang2.ID
-            WHERE TRANG_THAI = N'Chưa nộp' AND THANG <= @thang
+            WHERE TRANG_THAI = N'Chưa nộp' AND THANG <= @thang and NAM <= @year
 
 
 
@@ -337,7 +351,7 @@
     --CREATE PROCEDURE Best_Selling @thang INT AS
         SELECT TOP 3 H_ID,TEN_MAT_HANG, SUM(SO_LUONG) AS SO_LUONG_MUA
         FROM VIEWALL
-        WHERE THANG = @thang
+        WHERE THANG = @thang AND NAM = YEAR(GETDATE())
         GROUP BY H_ID,TEN_MAT_HANG
         ORDER BY SO_LUONG_MUA DESC
         ----
@@ -392,7 +406,8 @@
                     h.TONG_TIEN,
                     h.TRANG_THAI,
                     h.DANH_GIA_DON_HANG,
-                    Month(h.THOI_GIAN_NHAN_HANG) AS THANG
+                    Month(h.THOI_GIAN_NHAN_HANG) AS THANG,
+                    YEAR(h.THOI_GIAN_NHAN_HANG) AS NAM
                 from ( 
                         HoaDon              AS h 
                         INNER JOIN 
