@@ -54,14 +54,14 @@
     EXEC ADD_Shipper  -- add vào bảng phí 
     EXEC UpdateKhachHangAndShipper
     EXEC Update_ShipperFee
-    EXEC NopPhi 101, 's',10
+    EXEC NopPhi 101, 's',10,2021 -- @ID,@Ob,@mth,@yr
     SELECT * FROM KhachHang
     SELECT * FROM Shippers
     SELECT * FROM PhiShippers
     SELECT * FROM PhiCuaHang
 -- 2 Cuối tháng cần xem những thông tin  này:
     -- Xem những ai dang nợ tiền trong các tháng nhỏ hơn @thang
-    SELECT * FROM TON_NO( 10 ) --@thang
+    SELECT * FROM TON_NO( 10,2021 ) --@thang, @nam
     -- Xem mặt hàng nào bán chạy nhất trong @thang
     EXEC Best_Selling 10 --@thang
     -- Xem tổng tiền mà công ty đã nhận được từ shipper và cửa hàng ( trừ những CH, SP nào chưa gửi tiền)
@@ -74,5 +74,3 @@
 
 
 
-
---                                                     Đang tìm BUG
