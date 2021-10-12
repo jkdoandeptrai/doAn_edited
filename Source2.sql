@@ -235,7 +235,7 @@
         ------------------------
     -- 5, Tính doanh thu mỗi(cuối) tháng:
     -- Nộp tiền:
-    CREATE OR ALTER PROCEDURE NopPhi @ID_Phi TINYINT,@Who CHAR ,@month TINYINT,@year TINYINT AS
+    CREATE OR ALTER PROCEDURE NopPhi @ID_Phi TINYINT,@Who CHAR ,@month TINYINT,@year SMALLINT AS
     /*
       * @param: @ID_Phi : ID nộp phí trong bảng nộp phí, Shipper = FS_ID; CuaHang = FP_ID
                 @Who    : Chỉ định đối tượng nộp phí: 'S' or 's'-> Shipper; 'P' or 'p' -> CuaHang 
@@ -245,12 +245,12 @@
         DECLARE @check NVARCHAR(10) = ( SELECT TRANG_THAI 
                                     from PhiShippers 
                                     WHERE FS_ID = @ID_Phi and THANG = @month
-                                          and NAM = @year)
+                                          and NAM = @year and TIEN_PHI_THANG IS NOT NULL)
             -- Nếu @check = '' thì có nghĩa là FS_ID không tồn tại trong hệ thống
         DECLARE @check1 NVARCHAR(10) = ( SELECT TRANG_THAI 
                                         from PhiCuaHang 
                                         WHERE FP_ID = @ID_Phi and THANG = @month
-                                              and NAM = @year)
+                                              and NAM = @year and TIEN_PHI_THANG IS NOT NULL)
             -- Nếu @check1 = '' thì có nghĩa là FP_ID không tồn tại trong hệ thống hoặc tháng không hợp lệ
         -- THƯỜNG xảy ra 3 trường hợp:
         --                    1: Không tồn tại @thang, @ID_Phi trong database
@@ -275,7 +275,7 @@
                     BEGIN
                         UPDATE PhiCuaHang
                             SET TRANG_THAI = N'Đã nộp',THOI_GIAN_NOP = GETDATE()
-                        WHERE FP_ID = @ID_Phi and THANG = @month and NAM = @year
+                        WHERE FP_ID = @ID_Phi and THANG = @month and NAM = @year 
                         SELECT N'Đã nộp thành công.' AS SUCCESS
                     END
                 ELSE
@@ -319,7 +319,7 @@
 
     -- 2, Đưa ra danh sách các khách hàng, shipper, chưa nộp phí dịch vụ trong tháng
     --- Gồm các shipper + Cửa hàng chưa nộp phí trong những tháng < @thang
-    CREATE OR ALTER FUNCTION TON_NO(@thang INT,@year TINYINT)
+    CREATE OR ALTER FUNCTION TON_NO(@thang INT,@year SMALLINT)
     RETURNS TABLE 
     AS  
         RETURN
