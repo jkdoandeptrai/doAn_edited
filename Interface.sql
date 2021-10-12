@@ -36,7 +36,7 @@
         -- Tìm mặt hàng nào còn khuyến mãi:
         EXEC Check_Discount
         -- Cập nhật các mặt hàng trong hóa đơn
-        EXEC Cap_nhat_mat_hang_trong_hoa_don  101, 101 ,2      -- @B_ID, @H_ID ,@amount : Parameters
+        EXEC Cap_nhat_mat_hang_trong_hoa_don  100, 100 ,2      -- @B_ID, @H_ID ,@amount : Parameters
 
         SELECT * FROM MatHang_HD
         -- Update tất cả các bill mới
@@ -47,14 +47,14 @@
         EXEC Shipper_Confirm_Bill 1000,100 @praS,@praB  -- Shipper nào xác nhận đơn hàng có mã nào
 
          -- Khách hàng nhận hàng thì xác nhận lên hệ thống
-        EXEC Customer_Received 101,N'Tốt',3 @WhichBill , @TinhTrang, @danhgia  -- Khách hàng nhận được hàng, chỉ được xác nhận và đánh giá đơn hàng 1 lần
+        EXEC Customer_Received 100,N'Tốt',3 @WhichBill , @TinhTrang, @danhgia  -- Khách hàng nhận được hàng, chỉ được xác nhận và đánh giá đơn hàng 1 lần
     -------------------------------------------Hết quy trình đặt, giao và nhận hàng------------------
 -- Tính toán khác
     EXEC ADD_CuaHang  -- add vào bảng phí 
     EXEC ADD_Shipper  -- add vào bảng phí 
     EXEC UpdateKhachHangAndShipper
     EXEC Update_ShipperFee
-    EXEC NopPhi 101, 's',10,2021 -- @ID,@Ob,@mth,@yr
+    EXEC NopPhi 100, 's',10,2021 -- @ID,@Ob,@mth,@yr
     SELECT * FROM KhachHang
     SELECT * FROM Shippers
     SELECT * FROM PhiShippers
