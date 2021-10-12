@@ -132,7 +132,7 @@ CREATE TABLE PhiShippers(
     FS_ID                   SMALLINT PRIMARY KEY IDENTITY(100,1),
     S_ID                    SMALLINT FOREIGN KEY REFERENCES Shippers(S_ID) , -- ON DELETE CASCADE,
     THANG                   TINYINT DEFAULT(MONTH(GETDATE())),
-    NAM                     TINYINT DEFAULT(YEAR(GETDATE())),
+    NAM                     SMALLINT DEFAULT(YEAR(GETDATE())),
     SO_TIEN_KIEM_DUOC_TRONG_THANG INT DEFAULT (NULL),
     TIEN_PHI_THANG          INT DEFAULT(NULL),
     TRANG_THAI              NVARCHAR(20) DEFAULT(N'Chưa nộp') CHECK (TRANG_THAI = N'Đã nộp' or TRANG_THAI = N'Chưa nộp'),
@@ -143,11 +143,12 @@ CREATE TABLE PhiCuaHang(
     FP_ID                   SMALLINT PRIMARY KEY IDENTITY(100,1),
     P_ID                    SMALLINT FOREIGN KEY REFERENCES CuaHang(P_ID), -- ON DELETE CASCADE,
     THANG                   TINYINT DEFAULT(MONTH(GETDATE())),
-    NAM                     TINYINT DEFAULT(YEAR(GETDATE())),
+    NAM                     SMALLINT DEFAULT(YEAR(GETDATE())),
     TIEN_PHI_THANG          INT DEFAULT(NULL) CHECK(TIEN_PHI_THANG>=0),
     TRANG_THAI              NVARCHAR(20) DEFAULT(N'Chưa nộp') CHECK (TRANG_THAI = N'Đã nộp' or TRANG_THAI = N'Chưa nộp'),
     THOI_GIAN_NOP           DATETIME,
 );
+
 
 
 -- DEFAULT(CONCAT_WS('-', MONTH(GETDATE()), YEAR(GETDATE()))),
