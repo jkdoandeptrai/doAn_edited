@@ -101,7 +101,7 @@ CREATE TABLE HoaDon(
     THOI_GIAN_DAT_HANG      DATETIME DEFAULT(GETDATE()),
     THOI_GIAN_SHIPPER_XAC_NHAN DATETIME,
     TRANG_THAI              NVARCHAR(20) CHECK( TRANG_THAI = N'Chờ xác nhận' 
-                                        or TRANG_THAI = N'Đang giao'  or TRANG_THAI = N'Đã giao') 
+                                        or TRANG_THAI = N'Đang giao'  or TRANG_THAI = N'Đã giao' or TRANG_THAI= N'Đã hủy') 
                                         DEFAULT(N'Chờ xác nhận') ,
     THOI_GIAN_NHAN_HANG     DATETIME,
     TINH_TRANG_DON_HANG     NVARCHAR(50),

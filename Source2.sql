@@ -25,7 +25,7 @@
     -- 2, Shippers
     --     /*Cập nhật ID của Shipper mới trong hệ thống vào bảng PhiShippers */
 
-    CREATE OR ALTER PROCEDURE ADD_Shipper AS
+    --CREATE OR ALTER PROCEDURE ADD_Shipper AS
 
         INSERT INTO 
             PhiShippers(S_ID)
@@ -46,7 +46,7 @@
 
 
         /*Tính phí phải trả của Shipper mỗi cuối tháng và cập nhật vào trong bảng PhiShippers */
-    CREATE or ALTER PROCEDURE Update_ShipperFee AS
+    -- CREATE or ALTER PROCEDURE Update_ShipperFee AS
         UPDATE PhiShippers
             SET PhiShippers.SO_TIEN_KIEM_DUOC_TRONG_THANG = sSum.TONG_TIEN_SHIP ,
                 PhiShippers.TIEN_PHI_THANG = sSum.PHI_PHAI_TRA
@@ -85,7 +85,7 @@
 
     -- 3, Cập nhật:
     -- Ghi các mặt hàng có trong hóa đơn vào bảng MatHang_HD
-    CREATE OR ALTER PROCEDURE Cap_nhat_mat_hang_trong_hoa_don @B_ID SMALLINT, @H_ID SMALLINT,@amount TINYINT AS
+    -- CREATE OR ALTER PROCEDURE Cap_nhat_mat_hang_trong_hoa_don @B_ID SMALLINT, @H_ID SMALLINT,@amount TINYINT AS
     --- @param:* @B_ID
             --*  @H_ID
             --*  @amount
@@ -129,7 +129,7 @@
 
 
     -- Update tổng tiền hàng cho tất cả các bills mới được thêm mới.
-    CREATE or ALTER PROCEDURE Update_Bills AS
+    -- CREATE or ALTER PROCEDURE Update_Bills AS
 
     UPDATE HoaDon
         SET HoaDon.TONG_TIEN = bSum.SUM + HoaDon.PHI_SHIP_VND , 
@@ -149,7 +149,7 @@
             INNER JOIN 
                 HoaDon
             ON h.B_ID = HoaDon.B_ID
-        WHERE HoaDon.TONG_TIEN IS NULL AND HoaDon.TRANG_THAI != N'Đã giao'  --- Hóa đơn mới tạo mới cần cập nhật tổng tiền
+        WHERE HoaDon.TONG_TIEN IS NULL AND HoaDon.TRANG_THAI = N'Chờ xác nhận'  --- Hóa đơn mới tạo mới cần cập nhật tổng tiền
     
 
 
@@ -162,7 +162,7 @@
 
 
 --    Shipper xác nhận đơn:
-    CREATE OR ALTER PROCEDURE Shipper_Confirm_Bill @Who SMALLINT, @WhichBill SMALLINT AS
+    -- CREATE OR ALTER PROCEDURE Shipper_Confirm_Bill @Who SMALLINT, @WhichBill SMALLINT AS
     /* 
       *@param: @Who - Mã id shipper
                @WhichBll - Mã id đơn hàng
@@ -181,7 +181,7 @@
 
 
     -- Khách hàng nhận hàng:
-    CREATE OR ALTER PROCEDURE Customer_Received @WhichBill SMALLINT, @TinhTrang NVARCHAR(50), @danhgia TINYINT AS
+    -- CREATE OR ALTER PROCEDURE Customer_Received @WhichBill SMALLINT, @TinhTrang NVARCHAR(50), @danhgia TINYINT AS
     /* 
       *@param:  @WhichBill- Mã id đơn hàng
                 @TinhTrang - Cho biết tình trạng, đánh giá tổng quan đơn hàng
@@ -192,15 +192,29 @@
            WHERE B_ID = @WhichBill AND TRANG_THAI = N'Đang giao'
 
     
-
-
------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
+    --CREATE OR ALTER PROCEDURE Customer_Cancel @WhichBill SMALLINT AS
+            DECLARE @TrangThai NVARCHAR(20) = (
+                SELECT TRANG_THAI from HoaDon
+            )
+        IF @TrangThai = N'Chờ xác nhận'  
+            BEGIN
+                -- Chuyển hóa đơn về trạng thái hủy
+                UPDATE HoaDon
+                    SET @TrangThai = N'Đã hủy'
+                WHERE B_ID = @WhichBill
+                -- Trả lại hàng cho quán
+                UPDATE MatHang
+                    SET MatHang.CON_LAI = MatHang.CON_LAI + VIEWALL.SO_LUONG
+                FROM  VIEWALL 
+                WHERE VIEWALL.B_ID = @WhichBill
+            END
+        ELSE
+            SELECT N'Không thể hoàn tất,đơn hàng đang được giao. Hãy liên lạc với nhân viên để được biết thêm chi tiết.' AS THAT_BAI
+            ---------------------------------------------------------------------------------------------------------------------------------------------------
 
 
     -- 4, Cập nhật điểm tích lũy cho khách hàng, số sao cho Shipper:
-    CREATE or ALTER PROCEDURE UpdateKhachHangAndShipper AS
+    -- CREATE or ALTER PROCEDURE UpdateKhachHangAndShipper AS
         -- Khách hàng mua một đơn hàng thành công sẽ +1 điểm tích lũy
         -- KhachHang
         UPDATE KhachHang
@@ -235,7 +249,8 @@
         ------------------------
     -- 5, Tính doanh thu mỗi(cuối) tháng:
     -- Nộp tiền:
-    CREATE OR ALTER PROCEDURE NopPhi @ID_Phi TINYINT,@Who CHAR ,@month TINYINT,@year SMALLINT AS
+
+    --CREATE OR ALTER PROCEDURE NopPhi @ID_Phi TINYINT,@Who CHAR ,@month TINYINT,@year SMALLINT AS
     /*
       * @param: @ID_Phi : ID nộp phí trong bảng nộp phí, Shipper = FS_ID; CuaHang = FP_ID
                 @Who    : Chỉ định đối tượng nộp phí: 'S' or 's'-> Shipper; 'P' or 'p' -> CuaHang 
@@ -284,7 +299,7 @@
         ELSE
             SELECT N'Có lỗi xảy ra, xin vui lòng thử lại.' AS ERORR
 
-    CREATE or ALTER PROCEDURE Monthly_Revenue @thang int AS
+    --CREATE or ALTER PROCEDURE Monthly_Revenue @thang int AS
 
         SELECT SUM(TONG.TONG) AS TONG_DOANH_THU FROM
             (SELECT SUM(TIEN_PHI_THANG) AS TONG FROM PhiShippers
@@ -303,7 +318,7 @@
 
 -- II, Các lệnh truy xuất
     -- 1, Đưa ra danh sách khách hàng có điểm tích lũy đạt các mốc: 50,100,200,500
-    CREATE OR ALTER  FUNCTION KH_DiemTichLuy(@diem INT)
+    --CREATE OR ALTER  FUNCTION KH_DiemTichLuy(@diem INT)
          RETURNS TABLE AS RETURN(
             SELECT * FROM dbo.KhachHang
             WHERE DIEM_TICH_LUY = @diem  -- Số điểm mốc cần truy cứu
@@ -319,7 +334,7 @@
 
     -- 2, Đưa ra danh sách các khách hàng, shipper, chưa nộp phí dịch vụ trong tháng
     --- Gồm các shipper + Cửa hàng chưa nộp phí trong những tháng < @thang
-    CREATE OR ALTER FUNCTION TON_NO(@thang INT,@year SMALLINT)
+    --CREATE OR ALTER FUNCTION TON_NO(@thang INT,@year SMALLINT)
     RETURNS TABLE 
     AS  
         RETURN
@@ -338,7 +353,7 @@
                 SELECT P_ID,TEN_CUA_HANG from CuaHang
                 ) AS bang2
                 ON bang1.ID = bang2.ID
-            WHERE TRANG_THAI = N'Chưa nộp' AND THANG <= @thang and NAM <= @year
+            WHERE TRANG_THAI = N'Chưa nộp' AND THANG < @thang and NAM <= @year
 
 
 
@@ -348,7 +363,7 @@
 
     -- 3, Tìm TOP3 mặt hàng được mua nhiều nhất trong tháng:
         -- Khai thác từ bảng VIEWALL
-    CREATE PROCEDURE Best_Selling @thang INT AS
+    --CREATE PROCEDURE Best_Selling @thang INT AS
         SELECT TOP 3 H_ID,TEN_MAT_HANG, SUM(SO_LUONG) AS SO_LUONG_MUA
         FROM VIEWALL
         WHERE THANG = @thang AND NAM = YEAR(GETDATE())
@@ -374,14 +389,14 @@
 
 
     -- 4, Tìm số lượng hàng còn lại trong kho, và check xem những mặt hàng nào đang trong thời gian khuyến mại
-    CREATE OR ALTER FUNCTION Check_If_Available(@name NVARCHAR(10),@min INT)
+    --CREATE OR ALTER FUNCTION Check_If_Available(@name NVARCHAR(10),@min INT)
        RETURNS TABLE AS
            RETURN
                 SELECT * from MatHang
                 WHERE   MatHang.CON_LAI >= @min AND MatHang.TEN_MAT_HANG LIKE @name
 
 
-    CREATE OR ALTER PROCEDURE Check_Discount AS
+    --CREATE OR ALTER PROCEDURE Check_Discount AS
                 SELECT * from MatHang
                 WHERE   KHUYEN_MAI > 0
 
@@ -392,7 +407,7 @@
 --     -- Tạo một bảng theo dõi tổng thể tiện cho việc tính toán
     --- Bảng VIEWALL được Join từ nhiều bảng với mục đính tính tiền cho hóa đơn :
 
-    CREATE or ALTER VIEW VIEWALL AS 
+    --CREATE or ALTER VIEW VIEWALL AS 
                 SELECT 
                     h.B_ID,
                     m.H_ID,
