@@ -36,12 +36,12 @@
         -- Tìm mặt hàng nào còn khuyến mãi:
         EXEC Check_Discount
         -- Cập nhật các mặt hàng trong hóa đơn
-        EXEC Cap_nhat_mat_hang_trong_hoa_don  100, 101 ,2      -- @B_ID, @H_ID ,@amount : Parameters
-        EXEC Customer_Cancel 100  --@WhichBill
+        EXEC Cap_nhat_mat_hang_trong_hoa_don  100, 100 ,7      -- @B_ID, @H_ID ,@amount : Parameters
         SELECT * FROM MatHang_HD
         -- Update tất cả các bill mới
         SELECT * FROM HoaDon
         EXEC Update_Bills 
+        EXEC Customer_Cancel 100  --@WhichBill
         -- Shipper xác nhận đơn hàng:
         SELECT * FROM Shippers
         EXEC Shipper_Confirm_Bill 1000,100 @praS,@praB  -- Shipper nào xác nhận đơn hàng có mã nào
