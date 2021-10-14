@@ -162,17 +162,15 @@
 
 
 --    Shipper xác nhận đơn:
-    -- CREATE OR ALTER PROCEDURE Shipper_Confirm_Bill @Who SMALLINT, @WhichBill SMALLINT AS
+    --CREATE OR ALTER PROCEDURE Shipper_Confirm_Bill @Who SMALLINT, @WhichBill SMALLINT AS
     /* 
       *@param: @Who - Mã id shipper
                @WhichBll - Mã id đơn hàng
     */
         UPDATE HoaDon
             SET S_ID = @Who , TRANG_THAI = N'Đang giao', THOI_GIAN_SHIPPER_XAC_NHAN = GETDATE()
-        WHERE B_ID = @WhichBill AND TRANG_THAI = N'Chờ xác nhận'  -- chỉ những hóa đơn đang ở trạng thái "Chờ xác nhận" 
+        WHERE B_ID = @WhichBill AND TRANG_THAI = N'Chờ xác nhận' AND TONG_TIEN is NOT NULL  -- chỉ những hóa đơn đang ở trạng thái "Chờ xác nhận" 
                                                                    --thì shipper mới có quyền nhận đơn
-
-
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------
 
