@@ -92,9 +92,9 @@ CREATE TABLE HoaDon(
     NGUOI_NHAN              NVARCHAR(30) NOT NULL,
     SDT_NGUOI_NHAN          CHAR(13) NOT NULL,
     DIA_CHI_GIAO_HANG       NVARCHAR(50) NOT NULL,
-    PHI_SHIP_VND            INT,
+    PHI_SHIP_VND            INT CHECK (PHI_SHIP_VND >=0) DEFAULT (NULL),
     KHUYEN_MAI_VND          INT DEFAULT (NULL) CHECK ( KHUYEN_MAI_VND >= 0),
-    TONG_TIEN               INT  CHECK(TONG_TIEN >= 0),
+    TONG_TIEN               INT  CHECK(TONG_TIEN >= 1000),
     PHUONG_THUC_THANH_TOAN  NVARCHAR(50)  CHECK (PHUONG_THUC_THANH_TOAN =N'Thanh toán khi nhận hàng'
                                                  or PHUONG_THUC_THANH_TOAN = N'Chuyển khoản' ) 
                                                  DEFAULT(N'Thanh toán khi nhận hàng'),
@@ -110,8 +110,8 @@ CREATE TABLE HoaDon(
 );
 -- Bang MatHang_HD  // danh sach mat hang nam trong hoa don
 CREATE TABLE MatHang_HD(
-    H_ID                    SMALLINT FOREIGN KEY REFERENCES MatHang(H_ID), 
-    B_ID                    SMALLINT FOREIGN KEY REFERENCES HoaDon(B_ID),  
+    H_ID                    SMALLINT FOREIGN KEY REFERENCES MatHang(H_ID) ON DELETE CASCADE, 
+    B_ID                    SMALLINT FOREIGN KEY REFERENCES HoaDon(B_ID) ON DELETE CASCADE,  
     SO_LUONG                SMALLINT CHECK(SO_LUONG >0),
                             CONSTRAINT PR_KEY PRIMARY KEY (H_ID, B_ID)
 );
