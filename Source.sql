@@ -112,7 +112,7 @@ CREATE TABLE HoaDon(
 CREATE TABLE MatHang_HD(
     H_ID                    SMALLINT FOREIGN KEY REFERENCES MatHang(H_ID),  -- ON DELETE CASCADE,
     B_ID                    SMALLINT FOREIGN KEY REFERENCES HoaDon(B_ID),  -- ON DELETE CASCADE,
-    SO_LUONG                SMALLINT CHECK(SO_LUONG >=0),
+    SO_LUONG                SMALLINT CHECK(SO_LUONG >0),
                             CONSTRAINT PR_KEY PRIMARY KEY (H_ID, B_ID)
 );
 -- Bang CoSoCH
