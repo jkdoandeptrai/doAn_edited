@@ -400,7 +400,10 @@
                 SELECT * from MatHang
                 WHERE   KHUYEN_MAI > 0
 
-
+    -- 5 Tìm khách hàng có ngày sinh là ngày hôm nay:
+    --Create or ALTER PROCEDURE Sinh_Nhat AS
+        SELECT * from KhachHang
+        WHERE DAY(NGAY_SINH) = DAY(Getdate()) and MONTH(NGAY_SINH) = MONTH(GETDATE())
 -----------------------------------------------------------------------------------------------------------------------------------------------------
 
 -------------Phần phụ-------
