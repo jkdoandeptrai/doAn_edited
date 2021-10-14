@@ -71,7 +71,7 @@ CREATE TABLE CuaHang(
 */
 CREATE TABLE MatHang(
     H_ID                    SMALLINT PRIMARY KEY IDENTITY(100,1),
-    P_ID                    SMALLINT FOREIGN KEY REFERENCES CuaHang(P_ID), --ON DELETE CASCADE
+    P_ID                    SMALLINT FOREIGN KEY REFERENCES CuaHang(P_ID), 
     TEN_MAT_HANG            NVARCHAR(20) NOT NULL,
     GIA                     INT NOT NULL,
     KHUYEN_MAI              INT NOT NULL DEFAULT(0),
@@ -87,8 +87,8 @@ CREATE TABLE MatHang(
 */
 CREATE TABLE HoaDon(
     B_ID                    SMALLINT PRIMARY KEY IDENTITY(100,1),
-    S_ID                    SMALLINT FOREIGN KEY REFERENCES Shippers(S_ID), --ON DELETE CASCADE
-    C_ID                    SMALLINT FOREIGN KEY REFERENCES KhachHang(C_ID) ,--ON DELETE CASCADE,
+    S_ID                    SMALLINT FOREIGN KEY REFERENCES Shippers(S_ID), 
+    C_ID                    SMALLINT FOREIGN KEY REFERENCES KhachHang(C_ID) ,
     NGUOI_NHAN              NVARCHAR(30) NOT NULL,
     SDT_NGUOI_NHAN          CHAR(13) NOT NULL,
     DIA_CHI_GIAO_HANG       NVARCHAR(50) NOT NULL,
@@ -100,9 +100,9 @@ CREATE TABLE HoaDon(
                                                  DEFAULT(N'Thanh toán khi nhận hàng'),
     THOI_GIAN_DAT_HANG      DATETIME DEFAULT(GETDATE()),
     THOI_GIAN_SHIPPER_XAC_NHAN DATETIME,
-    TRANG_THAI              NVARCHAR(20) CHECK( TRANG_THAI = N'Chờ xác nhận' 
+    TRANG_THAI              NVARCHAR(20) CHECK( TRANG_THAI = N'Đang xử lý' or TRANG_THAI = N'Chờ xác nhận' 
                                         or TRANG_THAI = N'Đang giao'  or TRANG_THAI = N'Đã giao' or TRANG_THAI= N'Đã hủy') 
-                                        DEFAULT(N'Chờ xác nhận') ,
+                                        DEFAULT(N'Đang xử lý') ,
     THOI_GIAN_NHAN_HANG     DATETIME,
     TINH_TRANG_DON_HANG     NVARCHAR(50),
     DANH_GIA_DON_HANG       TINYINT CHECK( DANH_GIA_DON_HANG >=1 and DANH_GIA_DON_HANG<=5) DEFAULT(NULL),
@@ -110,8 +110,8 @@ CREATE TABLE HoaDon(
 );
 -- Bang MatHang_HD  // danh sach mat hang nam trong hoa don
 CREATE TABLE MatHang_HD(
-    H_ID                    SMALLINT FOREIGN KEY REFERENCES MatHang(H_ID),  -- ON DELETE CASCADE,
-    B_ID                    SMALLINT FOREIGN KEY REFERENCES HoaDon(B_ID),  -- ON DELETE CASCADE,
+    H_ID                    SMALLINT FOREIGN KEY REFERENCES MatHang(H_ID), 
+    B_ID                    SMALLINT FOREIGN KEY REFERENCES HoaDon(B_ID),  
     SO_LUONG                SMALLINT CHECK(SO_LUONG >0),
                             CONSTRAINT PR_KEY PRIMARY KEY (H_ID, B_ID)
 );
@@ -121,7 +121,7 @@ CREATE TABLE MatHang_HD(
 */
 CREATE TABLE CoSoCH(
     BA_ID                   SMALLINT ,
-    P_ID                    SMALLINT FOREIGN KEY REFERENCES CuaHang(P_ID), --ON DELETE CASCADE,
+    P_ID                    SMALLINT FOREIGN KEY REFERENCES CuaHang(P_ID), 
     DIA_CHI                 NVARCHAR(100) NOT NULL,
                             CONSTRAINT PK_CS PRIMARY KEY (BA_ID, P_ID),
     TRANG_THAI              NVARCHAR(10) CHECK(TRANG_THAI = N'Đóng' or TRANG_THAI = N'Mở')
@@ -130,7 +130,7 @@ CREATE TABLE CoSoCH(
 -- Bang PhiShippers // tinh phi duy tri cho shippers
 CREATE TABLE PhiShippers(
     FS_ID                   SMALLINT PRIMARY KEY IDENTITY(100,1),
-    S_ID                    SMALLINT FOREIGN KEY REFERENCES Shippers(S_ID) , -- ON DELETE CASCADE,
+    S_ID                    SMALLINT FOREIGN KEY REFERENCES Shippers(S_ID) ,
     THANG                   TINYINT DEFAULT(MONTH(GETDATE())),
     NAM                     SMALLINT DEFAULT(YEAR(GETDATE())),
     SO_TIEN_KIEM_DUOC_TRONG_THANG INT DEFAULT (NULL),
@@ -141,7 +141,7 @@ CREATE TABLE PhiShippers(
 -- Bang PhiCuaHang // tinh phi cho cua hang
 CREATE TABLE PhiCuaHang(
     FP_ID                   SMALLINT PRIMARY KEY IDENTITY(100,1),
-    P_ID                    SMALLINT FOREIGN KEY REFERENCES CuaHang(P_ID), -- ON DELETE CASCADE,
+    P_ID                    SMALLINT FOREIGN KEY REFERENCES CuaHang(P_ID),
     THANG                   TINYINT DEFAULT(MONTH(GETDATE())),
     NAM                     SMALLINT DEFAULT(YEAR(GETDATE())),
     TIEN_PHI_THANG          INT DEFAULT(NULL) CHECK(TIEN_PHI_THANG>=0),
