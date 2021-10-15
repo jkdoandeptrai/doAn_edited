@@ -24,22 +24,33 @@ SELECT * FROM Check_If_Available ('%',2)  ---(/*Tên hàng - Dùng được cả
                             N'Thanh Hóa',-- DIA_CHI,
                             N'2001-02-10'-- NGAY_SINH
                         )
+
 -- Thêm hóa đơn cho khách hàng có mã là C_ID
-                INSERT INTO HoaDon( C_ID, NGUOI_NHAN, SDT_NGUOI_NHAN, DIA_CHI_GIAO_HANG,PHUONG_THUC_THANH_TOAN,PHI_SHIP_VND,THOI_GIAN_DAT_HANG,GHI_CHU) 
-                        VALUES(
-                        10, -- C_ID,
-                        N'Bùi Đức Nguyên', -- NGUOI_NHAN,
-                        '0385779451',-- SDT_NGUOI_NHAN,
-                        N'Giải Phóng-Hà Nội',-- DIA_CHI_GIAO_HANG,
-                        N'Thanh toán khi nhận hàng',-- PHUONG_THUC_THANH_TOAN,
-                        30000,-- PHI_SHIP_VND,
-                        GETDATE(),
-                        N'Giao lúc 10-12h trưa'
-                    )
+
+ EXEC   ADD_BILL 
+      --@param:
+        @C_ID ,
+        @NGUOI_NHAN , 
+        @DCGH ,
+        @STD, 
+        @PTTT , 
+        @GC
+
+
 -- Cập nhật mặt hàng có trong hóa đơn có B_ID
-EXEC Cap_nhat_mat_hang_trong_hoa_don  100, 100 ,7      -- @B_ID, @H_ID ,@amount : Parameters
+
+ EXEC Cap_nhat_mat_hang_trong_hoa_don
+      --@param:
+        @B_ID ,
+        @H_ID,
+        @amount,
+        @command,                                        -- command : 'end','add' = default,'delete'
+        @phiship
+
+
+
+
 -- Cập nhật tiền đơn hàng
-EXEC Update_Bills 
     
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------
