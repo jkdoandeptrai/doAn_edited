@@ -6,8 +6,9 @@
 --   Đã thay đổi: Cột DANH_GIA từ bảng Shippers từ kiểu TINYINT sang DECIMAL(2,1)
 --   Xem thêm file: Interface.sql
 --                : Source.sql
--- I, Các lệnh cập nhật, thêm mới.
---     1, CuaHang:
+-- 
+
+--  1, CuaHang:
         /*Cập nhật ID của CuaHang mới trong hệ thống vào bảng PhiCuaHang: */
     CREATE OR ALTER PROCEDURE ADD_CuaHang AS
         INSERT INTO 
@@ -22,7 +23,9 @@
                                 )
         -------------------------------------------------------------------------------------
     -- -- SELECT * from PhiCuaHang
-    -- 2, Shippers
+
+
+-- 2, Shippers
     --     /*Cập nhật ID của Shipper mới trong hệ thống vào bảng PhiShippers */
 
     --CREATE OR ALTER PROCEDURE ADD_Shipper AS
@@ -41,11 +44,7 @@
         -- SELECT * from PhiShippers
 
 
------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
-        /*Tính phí phải trả của Shipper mỗi cuối tháng và cập nhật vào trong bảng PhiShippers */
+      /*Tính phí phải trả của Shipper mỗi cuối tháng và cập nhật vào trong bảng PhiShippers */
     -- CREATE or ALTER PROCEDURE Update_ShipperFee AS
         UPDATE PhiShippers
             SET PhiShippers.SO_TIEN_KIEM_DUOC_TRONG_THANG = sSum.TONG_TIEN_SHIP ,
@@ -80,85 +79,202 @@
 
 -----------------------------------------------------------------------------------------------------------------------------------------------------
 
+-- Hóa đơn
+-- kiểm tra mặt hàng có tên @name, số lượng ít nhất là @min có cửa hàng nào đáp ứng được không
+
+--CREATE OR ALTER PROCEDURE Check_If_Available @name NVARCHAR(10),@min INT = 1 AS
+        SELECT H_ID,CuaHang.P_ID,TEN_CUA_HANG,DIA_CHI,TRANG_THAI,TEN_MAT_HANG,GIA,KHUYEN_MAI from 
+        MatHang
+        INNER JOIN
+        CuaHang
+        ON MatHang.P_ID = CuaHang.P_ID
+        INNER JOIN
+        CoSoCH
+        ON CoSoCH.P_ID = CuaHang.P_ID
+        WHERE   MatHang.CON_LAI >= @min and TRANG_THAI = N'Mở'  AND MatHang.TEN_MAT_HANG LIKE @name
+
+
+-- Tạo một hóa đơn mới :
+--CREATE OR ALTER PROCEDURE ADD_BILL 
+    @C_ID SMALLINT,
+    @NGUOI_NHAN NVARCHAR(30) =  N'', 
+    @DCGH NVARCHAR(60),@STD CHAR(13) = '', 
+    @PTTT NVARCHAR(40) ='', 
+    @GC NVARCHAR(50) = N''
+    AS
+    -- Thêm hóa đơn có mã id là @C_ID
+    INSERT INTO HoaDon( C_ID ) 
+            VALUES(@C_ID)
+    -- Kiểm tra các tham số mặc địch, liệu có được thêm vào hay không?
+    --- NGUOI NHAN
+    IF @NGUOI_NHAN != N''
+        BEGIN
+            UPDATE HoaDon
+            SET NGUOI_NHAN = @NGUOI_NHAN
+            WHERE C_ID = @C_ID 
+        END
+    IF @NGUOI_NHAN = N''
+        DECLARE @NN NVARCHAR(30) = (
+            SELECT HO_VA_TEN FROM KhachHang
+            WHERE @C_ID = C_ID
+        )
+        BEGIN
+            UPDATE HoaDon
+            SET NGUOI_NHAN = @NN
+            WHERE C_ID = @C_ID 
+        END
+    --- DIA CHI GIAO HANG
+    IF @DCGH != N''
+        BEGIN
+            UPDATE HoaDon
+            SET DIA_CHI_GIAO_HANG = @DCGH
+            WHERE C_ID = @C_ID 
+        END
+    IF @DCGH = N''
+        DECLARE @DC NVARCHAR(30) = (
+            SELECT DIA_CHI FROM KhachHang
+            WHERE @C_ID = C_ID
+        )
+        BEGIN
+            UPDATE HoaDon
+            SET DIA_CHI_GIAO_HANG = @DC
+            WHERE C_ID = @C_ID 
+        END
+    ---  PHUONG THUC THANH TOAN, NẾU KHÔNG GHI THÊM GÌ THÌ PTTT MẶC ĐỊNH LÀ THANH TOÁN KHI NHẬN HÀNG
+    IF @PTTT != N''
+        BEGIN
+            UPDATE HoaDon
+            SET PHUONG_THUC_THANH_TOAN = @PTTT
+            WHERE C_ID = @C_ID 
+        END
+    --- PHÍ SHIP. TƯƠNG TỰ, PHÍ SHIP MẶC ĐỊNH LÀ 30.000
+    IF @GC != N''
+        BEGIN
+            UPDATE HoaDon
+            SET GHI_CHU = @GC
+            WHERE C_ID = @C_ID 
+        END
+    --------------------END-----------------
 
 
 
-    -- 3, Cập nhật:
-    -- Ghi các mặt hàng có trong hóa đơn vào bảng MatHang_HD
-    -- CREATE OR ALTER PROCEDURE Cap_nhat_mat_hang_trong_hoa_don @B_ID SMALLINT, @H_ID SMALLINT,@amount TINYINT AS
+-- Ghi các mặt hàng có trong hóa đơn vào bảng MatHang_HD, hay 'thêm vào giỏ hàng'
+
+    --CREATE OR ALTER PROCEDURE Cap_nhat_mat_hang_trong_hoa_don
+     @B_ID SMALLINT, 
+     @H_ID SMALLINT = -1,
+     @amount TINYINT = 1,
+     @command CHAR ='add',
+     -- @end = 'n' có nghĩa là khách hàng đang còn muốn mua thêm, chưa chốt đơn hàng của mình.
+     @phiship INT = -1
+     --   command hợp lệ : 'add'; 'end'; 'delete'
+     -- Mô tả:
+    --  Có 3 trường hợp xảy ra:
+    --          khách hàng muốn thêm mặt hàng vào hóa đơn của mình
+    --          Khách hàng khi đã thêm hóa đơn nhưng lại thay đổi ý định và xóa mặt hàng đó ra khỏi hóa đơn vì một vài lý do
+    --          khách hàng xác nhận command = 'end' với trạng thái không có mặt hàng nào trong hóa đơn
+    -- Ví dụ các cặp value - command hợp lệ(thường có):
+        --  EXEC   Cap_nhat_mat_hang_trong_hoa_don @B_ID = 100, @H_ID =100, @command = 'add' // thêm mặt hàng 100 và hóa đơn mã 100, số lượng =1 
+        --  EXEC   Cap_nhat_mat_hang_trong_hoa_don @B_ID = 100, @H_ID =100,@amount = n, @command = 'add' // thêm mặt hàng 100 và hóa đơn mã 100, số lượng = n
+        --  EXEC   Cap_nhat_mat_hang_trong_hoa_don @B_ID = 100, @H_ID =100,@amount = n // thêm mặt hàng 100 và hóa đơn mã 100, số lượng = n
+        --  EXEC   Cap_nhat_mat_hang_trong_hoa_don @B_ID = 100,@phiship = 30000,@command = 'end' // kết kết thúc hóa đơn, phí ship là 30000
+        --  EXEC   Cap_nhat_mat_hang_trong_hoa_don @B_ID = 100,@H_ID = 101, @command = 'delete' // xóa mặt hàng 101 khỏi hóa đơn 100
+
+
+
+      AS 
     --- @param:* @B_ID
             --*  @H_ID
-            --*  @amount
-        DECLARE @soluonghangconlai TINYINT;
-        DECLARE @trangthai NVARCHAR(15);
-        DECLARE @OK NVARCHAR(20);
-        DECLARE @NotOk NVARCHAR(100);
-        SET @OK = N'Thành công.';
-        SET @NotOk = N'Thất bại, số lượng hàng trong kho không đủ hoặc đơn hàng đang(đã) giao! Xin vui lòng thử lại';
-        SET @soluonghangconlai = (
+            --*  @amount : default = 1
+            --*  @end
+        DECLARE @soluonghangconlai TINYINT = (
             SELECT CON_LAI FROM MatHang
             WHERE MatHang.H_ID = @H_ID
-        ); -- get số lượng còn lại của mặt hàng có mã @H_ID trong kho
-        SET @trangthai = (
+        ); -- lấy số lượng còn lại của mặt hàng có mã @H_ID trong kho
+        DECLARE @trangthai NVARCHAR(15)  = (
             select TRANG_THAI from HoaDon
             WHERE HoaDon.B_ID = @B_ID
-        ) -- get trạng thái của đơn hàng có mã @B_ID
-        IF  @soluonghangconlai >= @amount and @trangthai = N'Chờ xác nhận'  
+        ); -- lấy trạng thái của đơn hàng có mã @B_ID
+        DECLARE @checkZero TINYINT = (
+            SELECT COUNT(H_ID) from MatHang_HD WHERE  B_ID = @B_ID
+        )
+        ------
+-- IF1
+        IF LOWER(@command)  = 'end' -- add có nghĩa là chốt đơn hàng, hóa đơn sẵn sàng được shipper xác nhận
+            BEGIN
+                IF @phiship <= -1
+                    BEGIN
+                        SELECT N'Nhập phí ship cho đơn hàng!' AS CHUA_NHAP_PHI_SHIP  
+                    END
+                IF @checkZero = 0
+                    BEGIN
+                    -- Đơn hàng không có mặt hàng nào sẽ bị xóa khỏi hệ thống
+                        DELETE FROM HoaDon WHERE B_ID = @B_ID
+                    -- Thông báo
+                        SELECT N'Đã xóa đơn hàng' AS XOA_DON_HANG
+                    END
+                ELSE
+                    BEGIN
+                        UPDATE HoaDon
+                        SET TRANG_THAI = N'Chờ xác nhận',TONG_TIEN = TONG_TIEN + @phiship
+                        WHERE B_ID = @B_ID
+                        SELECT N'Đơn hàng đã chuyển sang trạng thái chờ' AS SUCCESS
+                    END
+            END
+-- IF2   
+IF @H_ID IN (SELECT @H_ID FROM MatHang)
+BEGIN   
+        IF LOWER(@command)  = 'delete' -- delete có nghĩa là xóa mặt hàng có mã H_ID ra khỏi hóa đơn
+            BEGIN
+                SET @amount = (
+                    SELECT SO_LUONG  FROM MatHang_HD WHERE @H_ID = H_ID and B_ID = @B_ID
+                ) -- lấy số lượng hàng có mã H_ID trong BILL mã B_ID 
+                UPDATE MatHang
+                    SET MatHang.CON_LAI = (MatHang.CON_LAI + @amount) -- trả lại kho
+                    WHERE MatHang.H_ID = @H_ID
+                -- xóa khỏi bảng MatHang_HD
+                DELETE from MatHang_HD WHERE H_ID = @H_ID
+            END
+-- IF3
+        IF  @soluonghangconlai >= @amount and @trangthai = N'Đang xử lý' and LOWER(@command) = 'add' -- add có nghĩa là add thêm hàng
                 -- Kiểm tra trong kho hàng có đủ lượng @amount khách hàng yêu cầu hay không.
             BEGIN
+              -- Thêm vào giỏ hàng
                 INSERT INTO MatHang_HD(H_ID, B_ID,SO_LUONG) 
                     VALUES(
                         @H_ID, -- H_ID; ID mặt hàng mua
                         @B_ID,-- B_ID; ID hóa đơn mua
                         @amount -- SO_LUONG 
                     )
-                -- sau khi (thêm) bán thì phải trừ đi số lượng đã bán
+                -- sau khi (thêm) bán thì phải trừ đi số lượng đã bán trong bảng MatHang
                 UPDATE MatHang
                     SET MatHang.CON_LAI = (MatHang.CON_LAI - @amount)
                     WHERE MatHang.H_ID = @H_ID
-                SELECT @OK AS THANH_CONG
+                -- Thêm hàng thì phải nhảy số tiền trên hóa đơn:
+                UPDATE HoaDon
+                    SET HoaDon.TONG_TIEN = bSum.SUM, 
+                        HoaDon.KHUYEN_MAI_VND = bSum.DISCOUNT
+                    FROM (
+                        SELECT SUM( SO_LUONG* (GIA - KHUYEN_MAI)  )  as [SUM],
+                                SUM(SO_LUONG*KHUYEN_MAI) as DISCOUNT
+                        FROM VIEWALL -- XEM KHAI BÁO BẢNG VIEWALL ở dưới
+                        WHERE B_ID = 100 and TRANG_THAI = N'Đang xử lý'
+                    ) as bSum
+                    WHERE B_ID = @B_ID
+                -- Thông báo thêm mặt hàng thành công cho khách hàng biết
+                SELECT N'Thành công!' AS THANH_CONG
+                SELECT TONG_TIEN AS TAM_TINH FROM HoaDon WHERE B_ID = @B_ID
             END
+-- ELSE IF3
         ELSE  -- Nếu kho không đủ thì không thực hiện cập nhật
             BEGIN
-            (SELECT @NotOk AS THAT_BAI)
+                (SELECT N'Thất bại, hãy thử lại.' AS THAT_BAI)
             END
         
+END
 
-        
-
-
-
-    -- Update tổng tiền hàng cho tất cả các bills mới được thêm mới.
-    -- CREATE or ALTER PROCEDURE Update_Bills AS
-
-    UPDATE HoaDon
-        SET HoaDon.TONG_TIEN = bSum.SUM + HoaDon.PHI_SHIP_VND , 
-            HoaDon.KHUYEN_MAI_VND = bSum.DISCOUNT
-        FROM
-             (
-            HoaDon AS h
-            INNER JOIN
-                (
-                SELECT B_ID, SUM( SO_LUONG* (GIA - KHUYEN_MAI)  )  as [SUM], -- Chưa cộng phí ship
-                    SUM(SO_LUONG*KHUYEN_MAI)                   as DISCOUNT
-                FROM VIEWALL
-                GROUP BY B_ID
-                )  AS bSum
-                ON h.B_ID = bSum.B_ID
-            )
-            INNER JOIN 
-                HoaDon
-            ON h.B_ID = HoaDon.B_ID
-        WHERE HoaDon.TONG_TIEN IS NULL AND HoaDon.TRANG_THAI = N'Chờ xác nhận'  --- Hóa đơn mới tạo mới cần cập nhật tổng tiền
-    
-
-
-
-
-
------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
+ELSE
+    SELECT N'Có lỗi xảy ra, xin thử lại' AS ERORR
 
 
 --    Shipper xác nhận đơn:
@@ -169,17 +285,13 @@
     */
         UPDATE HoaDon
             SET S_ID = @Who , TRANG_THAI = N'Đang giao', THOI_GIAN_SHIPPER_XAC_NHAN = GETDATE()
-        WHERE B_ID = @WhichBill AND TRANG_THAI = N'Chờ xác nhận' AND TONG_TIEN is NOT NULL  -- chỉ những hóa đơn đang ở trạng thái "Chờ xác nhận" 
+        WHERE B_ID = @WhichBill AND TRANG_THAI = N'Chờ xác nhận'  -- chỉ những hóa đơn đang ở trạng thái "Chờ xác nhận" 
                                                                    --thì shipper mới có quyền nhận đơn
 
------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-
-
-
-    -- Khách hàng nhận hàng:
-    -- CREATE OR ALTER PROCEDURE Customer_Received @WhichBill SMALLINT, @TinhTrang NVARCHAR(50), @danhgia TINYINT AS
+ -- Khách hàng nhận hàng:
+    --CREATE OR ALTER PROCEDURE Customer_Received @WhichBill SMALLINT, @TinhTrang NVARCHAR(50), @danhgia TINYINT AS
     /* 
       *@param:  @WhichBill- Mã id đơn hàng
                 @TinhTrang - Cho biết tình trạng, đánh giá tổng quan đơn hàng
@@ -189,8 +301,9 @@
         SET TRANG_THAI = N'Đã giao', THOI_GIAN_NHAN_HANG = GETDATE(), TINH_TRANG_DON_HANG = @TinhTrang, DANH_GIA_DON_HANG = @danhgia
            WHERE B_ID = @WhichBill AND TRANG_THAI = N'Đang giao'
 
-    
-    --CREATE OR ALTER PROCEDURE Customer_Cancel @WhichBill SMALLINT AS
+
+-- Khách hàng hủy đơn hàng có mã @WhichBill với điều kiện TRANG_THAI = N'Chờ xác nhận'  
+--CREATE OR ALTER PROCEDURE Customer_Cancel @WhichBill SMALLINT AS
             DECLARE @TrangThai NVARCHAR(20) = (
                 SELECT TRANG_THAI from HoaDon
             )
@@ -198,21 +311,20 @@
             BEGIN
                 -- Chuyển hóa đơn về trạng thái hủy
                 UPDATE HoaDon
-                    SET @TrangThai = N'Đã hủy'
+                    SET TRANG_THAI = N'Đã hủy'
                 WHERE B_ID = @WhichBill
                 -- Trả lại hàng cho quán
                 UPDATE MatHang
                     SET MatHang.CON_LAI = MatHang.CON_LAI + VIEWALL.SO_LUONG
                 FROM  VIEWALL 
-                WHERE VIEWALL.B_ID = @WhichBill
+                WHERE VIEWALL.B_ID = @WhichBill AND VIEWALL.H_ID = MatHang.H_ID
             END
         ELSE
             SELECT N'Không thể hoàn tất,đơn hàng đang được giao. Hãy liên lạc với nhân viên để được biết thêm chi tiết.' AS THAT_BAI
-            ---------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-    -- 4, Cập nhật điểm tích lũy cho khách hàng, số sao cho Shipper:
-    -- CREATE or ALTER PROCEDURE UpdateKhachHangAndShipper AS
+-- 4, Cập nhật điểm tích lũy cho khách hàng, số sao cho Shipper:
+    --CREATE or ALTER PROCEDURE UpdateKhachHangAndShipper AS
         -- Khách hàng mua một đơn hàng thành công sẽ +1 điểm tích lũy
         -- KhachHang
         UPDATE KhachHang
@@ -234,19 +346,9 @@
         WHERE Shippers.S_ID = DanhGia.S_ID
         
         -- Cập nhật số sao đánh giá, số điểm tích lũy liên tục
-        ---
 
 
-
------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
-
-
-        ------------------------
-    -- 5, Tính doanh thu mỗi(cuối) tháng:
-    -- Nộp tiền:
+-- Nộp tiền phí:
 
     --CREATE OR ALTER PROCEDURE NopPhi @ID_Phi TINYINT,@Who CHAR ,@month TINYINT,@year SMALLINT AS
     /*
@@ -272,7 +374,7 @@
 
         IF ( LOWER(@who) = 's' ) and @check != ''                                  
             BEGIN
-                IF @check = N'Chưa nộp'
+                IF @check = N'Chưa nộp'  --- sau này thêm điều kiện check: @month < Month(Getdate()) để đảm bảo hết tháng shipper mới nộp được
                     BEGIN
                         UPDATE PhiShippers
                             SET TRANG_THAI = N'Đã nộp', THOI_GIAN_NOP = GETDATE()
@@ -297,7 +399,9 @@
         ELSE
             SELECT N'Có lỗi xảy ra, xin vui lòng thử lại.' AS ERORR
 
-    --CREATE or ALTER PROCEDURE Monthly_Revenue @thang int AS
+
+-- Tính số tiền công ty đã nhận được từ việc nộp phí của Shipper và CuaHang
+ --CREATE or ALTER PROCEDURE Monthly_Revenue @thang int AS
 
         SELECT SUM(TONG.TONG) AS TONG_DOANH_THU FROM
             (SELECT SUM(TIEN_PHI_THANG) AS TONG FROM PhiShippers
@@ -308,29 +412,7 @@
             ) AS TONG
 
 
-
------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
-
--- II, Các lệnh truy xuất
-    -- 1, Đưa ra danh sách khách hàng có điểm tích lũy đạt các mốc: 50,100,200,500
-    --CREATE OR ALTER  FUNCTION KH_DiemTichLuy(@diem INT)
-         RETURNS TABLE AS RETURN(
-            SELECT * FROM dbo.KhachHang
-            WHERE DIEM_TICH_LUY = @diem  -- Số điểm mốc cần truy cứu
-         )
-
-
-
-
------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
-
-    -- 2, Đưa ra danh sách các khách hàng, shipper, chưa nộp phí dịch vụ trong tháng
+--Đưa ra danh sách các khách hàng, shipper, chưa nộp phí dịch vụ trong tháng
     --- Gồm các shipper + Cửa hàng chưa nộp phí trong những tháng < @thang
     --CREATE OR ALTER FUNCTION TON_NO(@thang INT,@year SMALLINT)
     RETURNS TABLE 
@@ -354,61 +436,34 @@
             WHERE TRANG_THAI = N'Chưa nộp' AND THANG < @thang and NAM <= @year
 
 
+--Đưa ra danh sách khách hàng có điểm tích lũy đạt các mốc: 50,100,200,500
+    --CREATE OR ALTER  FUNCTION KH_DiemTichLuy(@diem INT)
+         RETURNS TABLE AS RETURN(
+            SELECT * FROM dbo.KhachHang
+            WHERE DIEM_TICH_LUY = @diem  -- Số điểm mốc cần truy cứu
+         )
 
------------------------------------------------------------------------------------------------------------------------------------------------------
 
-
-
-    -- 3, Tìm TOP3 mặt hàng được mua nhiều nhất trong tháng:
-        -- Khai thác từ bảng VIEWALL
+-- top 3 mặt hàng mua nhiều nhất trong tháng
     --CREATE PROCEDURE Best_Selling @thang INT AS
         SELECT TOP 3 H_ID,TEN_MAT_HANG, SUM(SO_LUONG) AS SO_LUONG_MUA
         FROM VIEWALL
         WHERE THANG = @thang AND NAM = YEAR(GETDATE())
         GROUP BY H_ID,TEN_MAT_HANG
         ORDER BY SO_LUONG_MUA DESC
-        ----
-        ----
-        -- Hoặc khai thác từ các bảng có sẵn
-        
-        -- FROM VIEWALL = FROM (
-        --         MatHang
-        --         INNER join
-        --         MatHang_HD
-        --         ON MatHang_HD.H_ID = MatHang.H_ID
-        --     ) 
 
-    ------- EXCECUTE
-
-
------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
-
-    -- 4, Tìm số lượng hàng còn lại trong kho, và check xem những mặt hàng nào đang trong thời gian khuyến mại
-    --CREATE OR ALTER FUNCTION Check_If_Available(@name NVARCHAR(10),@min INT)
-       RETURNS TABLE AS
-           RETURN
-                SELECT * from MatHang
-                WHERE   MatHang.CON_LAI >= @min AND MatHang.TEN_MAT_HANG LIKE @name
-
-
+-- Kiểm tra khuyến mại đang có 
     --CREATE OR ALTER PROCEDURE Check_Discount AS
                 SELECT * from MatHang
                 WHERE   KHUYEN_MAI > 0
 
-    -- 5 Tìm khách hàng có ngày sinh là ngày hôm nay:
+-- 5 Tìm khách hàng có ngày sinh là ngày hôm nay:
     --Create or ALTER PROCEDURE Sinh_Nhat AS
         SELECT * from KhachHang
         WHERE DAY(NGAY_SINH) = DAY(Getdate()) and MONTH(NGAY_SINH) = MONTH(GETDATE())
------------------------------------------------------------------------------------------------------------------------------------------------------
 
--------------Phần phụ-------
---     -- Tạo một bảng theo dõi tổng thể tiện cho việc tính toán
-    --- Bảng VIEWALL được Join từ nhiều bảng với mục đính tính tiền cho hóa đơn :
-
-    --CREATE or ALTER VIEW VIEWALL AS 
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
+--CREATE or ALTER VIEW VIEWALL AS 
                 SELECT 
                     h.B_ID,
                     m.H_ID,
@@ -433,15 +488,3 @@
                                 MatHang     AS mh 
                             on mh.H_ID = m.H_ID
                 )
-
-
-
-
-
-SELECT * FROM MatHang_HD
-SELECT * FROM MatHang
-SELECT * FROM VIEWALL
-
-
-
---                                                                                                                          Mai Ngọc Đoàn
