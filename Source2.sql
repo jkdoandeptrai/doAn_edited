@@ -83,7 +83,7 @@
 -- kiểm tra mặt hàng có tên @name, số lượng ít nhất là @min có cửa hàng nào đáp ứng được không
 
 --CREATE OR ALTER PROCEDURE Check_If_Available @name NVARCHAR(10),@min INT = 1 AS
-        SELECT H_ID,CuaHang.P_ID,TEN_CUA_HANG,DIA_CHI,TRANG_THAI,TEN_MAT_HANG,GIA,KHUYEN_MAI from 
+        SELECT H_ID,BA_ID,CuaHang.P_ID,TEN_CUA_HANG,DIA_CHI,TRANG_THAI,TEN_MAT_HANG,GIA,KHUYEN_MAI from 
         MatHang
         INNER JOIN
         CuaHang
