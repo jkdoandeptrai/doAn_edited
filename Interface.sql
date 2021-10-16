@@ -19,8 +19,8 @@ EXEC Check_If_Available '%',2  ---(/*Tên hàng - Dùng được cả regular ex
 -- Thêm khách hàng
                 INSERT INTO KhachHang(HO_VA_TEN,SDT,DIA_CHI,NGAY_SINH)
                         VALUES(
-                        N'Bùi Đức Nguyên',  -- HO_VA_TEN,
-                            '0294874884',-- SDT,
+                        N'Bùi Đức Thành',  -- HO_VA_TEN,
+                            '020482754',-- SDT,
                             N'Thanh Hóa',-- DIA_CHI,
                             N'2001-02-10'-- NGAY_SINH
                         )
@@ -37,19 +37,15 @@ EXEC Check_If_Available '%',2  ---(/*Tên hàng - Dùng được cả regular ex
         @PTTT , 
         @GC
 
-SELECT * FROM HoaDon
-SELECT * FROM MatHang_HD
-SELECT * FROM MatHang
-
 
 -- Cập nhật mặt hàng có trong hóa đơn có B_ID
         EXEC Cap_nhat_mat_hang_trong_hoa_don
         --@param:
-                @B_ID = 110 ,
-                -- @H_ID = 102,
-                -- @amount = 3,
+                @B_ID = 111 ,
+                -- @H_ID = 101,
+                -- @amount = 2,
                 @command = 'end',                                        -- command : 'end','add' = default,'delete'
-                @phiship = 100000
+                @phiship = 15000
 
 SELECT * FROM MatHang_HD
 
@@ -60,9 +56,9 @@ SELECT * FROM MatHang_HD
      
         EXEC Shipper_Confirm_Bill
         @Who = 1000,
-        @WhichBill = 110 -- Shipper nào xác nhận đơn hàng có mã nào
+        @WhichBill = 111 -- Shipper nào xác nhận đơn hàng có mã nào
 
-
+        SELECT * from Shippers
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -71,11 +67,11 @@ SELECT * FROM MatHang_HD
 
 -- Khách hàng nhận được hàng, chỉ được xác nhận và đánh giá đơn hàng 1 lần
         EXEC Customer_Received
-                @WhichBill = 100 , 
-                @TinhTrang = N'Tốt', 
+                @WhichBill = 111 , 
+                @TinhTrang = N'ok em', 
                 @danhgia   = 5 
 -- Khách hàng hủy đơn hàng có mã B_ID, điều kiện là đơn hàng đó phải chưa được shipper nào xác nhận cả.
-        EXEC Customer_Cancel 100  --@WhichBill
+        EXEC Customer_Cancel 111  --@WhichBill
 
 
 
@@ -84,29 +80,26 @@ SELECT * FROM MatHang_HD
 
 --                                                                      Phần Ngoài                                                                       --
 
-
-EXEC ADD_CuaHang  -- thêm cửa hàng vào bảng phí 
-
-EXEC ADD_Shipper  -- thêm shipper vào bảng phí 
-
-EXEC UpdateKhachHangAndShipper -- Cập nhật điểm tích lũy cho khách hàng, số sao đánh giá cho shippers 
-
+-- thêm các cửa hàng, shipper vào bảng tính phí.
+EXEC ADD_Phi
 EXEC Update_ShipperFee -- Cập nhật phí dịch vụ cho shipper mỗi cuối tháng
 
 EXEC NopPhi 100, 's',10,2021 -- @ID,@Ob,@mth,@yr: Shipper chỉ có thể nộp phí cho tháng trước đó, tức là phải hết 1 tháng làm việc mới được nộp.
 
-SELECT * FROM KhachHang
-SELECT * FROM Shippers
-SELECT * FROM PhiShippers
-SELECT * FROM PhiCuaHang
 -- Cuối tháng cần xem những thông tin  này:
 
--- Xem những ai dang nợ tiền trong các tháng nhỏ hơn @thang
+        -- Xem những ai dang nợ tiền trong các tháng nhỏ hơn @thang
 
-SELECT * FROM TON_NO( 10,2021 ) --@thang, @nam
+        SELECT * FROM TON_NO( 10,2021 ) --@thang, @nam
 
--- Xem mặt hàng nào bán chạy nhất trong @thang
-EXEC Best_Selling 10 --@thang
+        -- Xem mặt hàng nào bán chạy nhất trong @thang
+        EXEC Best_Selling 10 --@thang
 
--- Xem tổng tiền mà công ty đã nhận được từ shipper và cửa hàng ( trừ những CH, SP nào chưa gửi tiền)
-EXEC Monthly_Revenue 10 --@thang
+        -- Xem tổng tiền mà công ty đã nhận được từ shipper và cửa hàng ( trừ những CH, SP nào chưa gửi tiền)
+        EXEC Monthly_Revenue 10 --@thang
+
+
+-- công việc tiếp tục: 
+-- tạo procedure thêm shipper và cuahang
+-- tìm xem cuahang nào có lượng hàng tiêu thụ mạnh nhất
+-- tìm xem shipper nào hoạt động nhiều nhất(giao được nhiều hàng nhất) trong tháng
