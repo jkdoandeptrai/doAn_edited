@@ -43,13 +43,13 @@ SELECT * FROM MatHang
 
 
 -- Cập nhật mặt hàng có trong hóa đơn có B_ID
- EXEC Cap_nhat_mat_hang_trong_hoa_don
-      --@param:
-        @B_ID = 110 ,
-        -- @H_ID = 102,
-        -- @amount = 3,
-        @command = 'end',                                        -- command : 'end','add' = default,'delete'
-        @phiship = 100000
+        EXEC Cap_nhat_mat_hang_trong_hoa_don
+        --@param:
+                @B_ID = 110 ,
+                -- @H_ID = 102,
+                -- @amount = 3,
+                @command = 'end',                                        -- command : 'end','add' = default,'delete'
+                @phiship = 100000
 
 SELECT * FROM MatHang_HD
 
@@ -70,7 +70,10 @@ SELECT * FROM MatHang_HD
 --                                                                     Phần Khách hàng                                                                       --
 
 -- Khách hàng nhận được hàng, chỉ được xác nhận và đánh giá đơn hàng 1 lần
-        EXEC Customer_Received 110,N'Tốt',3 @WhichBill , @TinhTrang, @danhgia  
+        EXEC Customer_Received
+                @WhichBill = 100 , 
+                @TinhTrang = N'Tốt', 
+                @danhgia   = 5 
 -- Khách hàng hủy đơn hàng có mã B_ID, điều kiện là đơn hàng đó phải chưa được shipper nào xác nhận cả.
         EXEC Customer_Cancel 100  --@WhichBill
 
