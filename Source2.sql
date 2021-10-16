@@ -460,7 +460,7 @@
                 Select FS_ID AS PHI_ID,S_ID AS ID,THANG,NAM,TRANG_THAI from PhiShippers
                 UNION
                 SELECt FP_ID AS PHI_ID, P_ID AS ID,THANG,NAM,TRANG_THAI FROM PhiCuaHang
-                )
+
                 AS bang1
                 INNER JOIN
                 (
