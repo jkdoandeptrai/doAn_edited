@@ -18,12 +18,12 @@
             PhiShippers(S_ID)
                 SELECT S_ID from Shippers 
                     WHERE MONTH(GETDATE()) > ALL (
-                            SELECT THANG FROM PhiShippers
-                        ) OR YEAR(GETDATE()) > ALL (
-                            SELECT NAM FROM PhiShippers
-                        ) OR S_ID != ALL (
-                            SELECT S_ID from PhiShippers
-                        ) 
+                        SELECT THANG FROM PhiShippers
+                    ) OR YEAR(GETDATE()) > ALL (
+                        SELECT NAM FROM PhiShippers
+                    ) OR S_ID != ALL (
+                        SELECT S_ID from PhiShippers
+                    ) 
 
 
         -------------------------------------------------------------------------------------
@@ -489,7 +489,7 @@
                 SELECT * from MatHang
                 WHERE   KHUYEN_MAI > 0
 
--- 5 Tìm khách hàng có ngày sinh là ngày hôm nay:
+-- Tìm khách hàng có ngày sinh là ngày hôm nay:
     --Create or ALTER PROCEDURE Sinh_Nhat AS
         SELECT * from KhachHang
         WHERE DAY(NGAY_SINH) = DAY(Getdate()) and MONTH(NGAY_SINH) = MONTH(GETDATE())

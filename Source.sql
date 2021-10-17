@@ -73,8 +73,8 @@ CREATE TABLE MatHang(
     H_ID                    SMALLINT PRIMARY KEY IDENTITY(100,1),
     P_ID                    SMALLINT FOREIGN KEY REFERENCES CuaHang(P_ID), 
     TEN_MAT_HANG            NVARCHAR(20) NOT NULL,
-    GIA                     INT NOT NULL,
-    KHUYEN_MAI              INT NOT NULL DEFAULT(0),
+    GIA                     INT NOT NULL CHECK(GIA >= 500), -- giá bán phải ít nhất 500đ
+    KHUYEN_MAI              INT NOT NULL DEFAULT(0) CHECK(KHUYEN_MAI >= 0),
     CON_LAI                 INT CHECK(CON_LAI >=0), -- Số lượng còn lại trong kho của cửa hàng.
 );
 -- Bang HoaDon
@@ -95,14 +95,10 @@ CREATE TABLE HoaDon(
     PHI_SHIP_VND            INT CHECK (PHI_SHIP_VND >=0) DEFAULT (NULL),
     KHUYEN_MAI_VND          INT DEFAULT (NULL) CHECK ( KHUYEN_MAI_VND >= 0),
     TONG_TIEN               INT  CHECK(TONG_TIEN >= 1000),
-    PHUONG_THUC_THANH_TOAN  NVARCHAR(50)  CHECK (PHUONG_THUC_THANH_TOAN =N'Thanh toán khi nhận hàng'
-                                                 or PHUONG_THUC_THANH_TOAN = N'Chuyển khoản' ) 
-                                                 DEFAULT(N'Thanh toán khi nhận hàng'),
+    PHUONG_THUC_THANH_TOAN  NVARCHAR(50)  CHECK (PHUONG_THUC_THANH_TOAN IN (N'Thanh toán khi nhận hàng', N'Chuyển khoản') ) DEFAULT(N'Thanh toán khi nhận hàng'),
     THOI_GIAN_DAT_HANG      DATETIME DEFAULT(GETDATE()),
     THOI_GIAN_SHIPPER_XAC_NHAN DATETIME,
-    TRANG_THAI              NVARCHAR(20) CHECK( TRANG_THAI = N'Đang xử lý' or TRANG_THAI = N'Chờ xác nhận' 
-                                        or TRANG_THAI = N'Đang giao'  or TRANG_THAI = N'Đã giao' or TRANG_THAI= N'Đã hủy') 
-                                        DEFAULT(N'Đang xử lý') ,
+    TRANG_THAI              NVARCHAR(20) CHECK( TRANG_THAI IN (N'Đang xử lý' ,N'Chờ xác nhận',N'Đang giao' , N'Đã giao', N'Đã hủy')) DEFAULT(N'Đang xử lý') ,
     THOI_GIAN_NHAN_HANG     DATETIME,
     TINH_TRANG_DON_HANG     NVARCHAR(50),
     DANH_GIA_DON_HANG       TINYINT CHECK( DANH_GIA_DON_HANG >=1 and DANH_GIA_DON_HANG<=5) DEFAULT(NULL),
@@ -113,7 +109,7 @@ CREATE TABLE MatHang_HD(
     H_ID                    SMALLINT FOREIGN KEY REFERENCES MatHang(H_ID) ON DELETE CASCADE, 
     B_ID                    SMALLINT FOREIGN KEY REFERENCES HoaDon(B_ID) ON DELETE CASCADE,  
     SO_LUONG                SMALLINT CHECK(SO_LUONG >0),
-                            CONSTRAINT PR_KEY PRIMARY KEY (H_ID, B_ID)
+    CONSTRAINT PR_KEY PRIMARY KEY (H_ID, B_ID)
 );
 -- Bang CoSoCH
 /*
@@ -123,7 +119,7 @@ CREATE TABLE CoSoCH(
     BA_ID                   SMALLINT ,
     P_ID                    SMALLINT FOREIGN KEY REFERENCES CuaHang(P_ID), 
     DIA_CHI                 NVARCHAR(100) NOT NULL,
-                            CONSTRAINT PK_CS PRIMARY KEY (BA_ID, P_ID),
+    CONSTRAINT PK_CS PRIMARY KEY (BA_ID, P_ID),
     TRANG_THAI              NVARCHAR(10) CHECK(TRANG_THAI = N'Đóng' or TRANG_THAI = N'Mở')
 );
 
@@ -135,7 +131,7 @@ CREATE TABLE PhiShippers(
     NAM                     SMALLINT DEFAULT(YEAR(GETDATE())),
     SO_TIEN_KIEM_DUOC_TRONG_THANG INT DEFAULT (NULL),
     TIEN_PHI_THANG          INT DEFAULT(NULL),
-    TRANG_THAI              NVARCHAR(20) DEFAULT(N'Chưa nộp') CHECK (TRANG_THAI = N'Đã nộp' or TRANG_THAI = N'Chưa nộp'),
+    TRANG_THAI              NVARCHAR(20) DEFAULT(N'Chưa nộp') CHECK (TRANG_THAI IN (N'Đã nộp' ,N'Chưa nộp') ),
     THOI_GIAN_NOP           DATETIME,
 );
 -- Bang PhiCuaHang // tinh phi cho cua hang
@@ -145,15 +141,7 @@ CREATE TABLE PhiCuaHang(
     THANG                   TINYINT DEFAULT(MONTH(GETDATE())),
     NAM                     SMALLINT DEFAULT(YEAR(GETDATE())),
     TIEN_PHI_THANG          INT DEFAULT(NULL) CHECK(TIEN_PHI_THANG>=0),
-    TRANG_THAI              NVARCHAR(20) DEFAULT(N'Chưa nộp') CHECK (TRANG_THAI = N'Đã nộp' or TRANG_THAI = N'Chưa nộp'),
+    TRANG_THAI              NVARCHAR(20) DEFAULT(N'Chưa nộp') CHECK (TRANG_THAI IN (N'Đã nộp', N'Chưa nộp')),
     THOI_GIAN_NOP           DATETIME,
 );
-
-
-
--- DEFAULT(CONCAT_WS('-', MONTH(GETDATE()), YEAR(GETDATE()))),
-
-
-
-
 --                                                                                                                         Mai Ngọc Đoàn
