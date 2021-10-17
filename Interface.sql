@@ -8,7 +8,8 @@
 
 SELECT * FROM KH_DiemTichLuy( 3 /*Mốc điểm*/)
 
-
+-- Xem cửa hàng nào có mặt hàng bán chạy nhất:
+EXEC _MVP_
 -- Tìm xem những khách hàng nào có ngày sinh hôm nay để áp dụng chương trình khuyến mãi
 
 EXEC Sinh_Nhat
@@ -97,9 +98,3 @@ EXEC NopPhi 100, 's',10,2021 -- @ID,@Ob,@mth,@yr: Shipper chỉ có thể nộp 
 
         -- Xem tổng tiền mà công ty đã nhận được từ shipper và cửa hàng ( trừ những CH, SP nào chưa gửi tiền)
         EXEC Monthly_Revenue 10 --@thang
-
-
--- công việc tiếp tục: 
--- tạo procedure thêm shipper và cuahang
--- tìm xem cuahang nào có lượng hàng tiêu thụ mạnh nhất
--- tìm xem shipper nào hoạt động nhiều nhất(giao được nhiều hàng nhất) trong tháng

@@ -468,7 +468,7 @@
 
  --Đưa ra danh sách khách hàng có điểm tích lũy đạt các mốc: 50,100,200,500
     --CREATE OR ALTER  FUNCTION KH_DiemTichLuy(@diem INT)
-         RETURNS TABLE AS RETURN(
+        RETURNS TABLE AS RETURN(
             SELECT * FROM dbo.KhachHang
             WHERE DIEM_TICH_LUY = @diem  -- Số điểm mốc cần truy cứu
          )
@@ -493,11 +493,47 @@
     --Create or ALTER PROCEDURE Sinh_Nhat AS
         SELECT * from KhachHang
         WHERE DAY(NGAY_SINH) = DAY(Getdate()) and MONTH(NGAY_SINH) = MONTH(GETDATE())
+
+-- tìm xem cuahang nào có mặt hàng là tiêu thụ mạnh nhất
+        --CREATE OR ALTER PROCEDURE _MVP_ AS
+        -- tìm số lượng bán được của mặt hàng chiếm lượng tiêu thụ lớn nhất:
+        --<B1>: tìm số lượng bán ra nhiều nhất trong tất cả mặt hàng là bao nhiêu
+        DECLARE @MHLN INT = (
+            SELECT MAX(BANG7.SL) AS MAX_SL FROM(
+                SELECT H_ID, SUM(SO_LUONG) AS SL FROM MatHang_HD
+                GROUP BY H_ID
+            ) AS BANG7
+        )
+        --</B1>
+        -- Tìm cửa hàng:
+        --<B5>: lấy thông tin cửa hàng
+        SELECT * FROM CuaHang
+        WHERE P_ID = ANY(
+            -- <B4>: chọn các P_ID khác nhau có chứa mặt hàng H_ID bán chạy nhất
+            SELECT DISTINCT P_ID FROM MatHang
+            WHERE H_ID = ANY (
+                -- <B3>: Chọn các H_ID có tổng lượng hàng bán chạy nhất:
+                SELECT H_ID FROM(
+                    --<B2>: tính tổng số lượng bán ra của mỗi mặt hàng
+                    SELECT H_ID, SUM(SO_LUONG) AS SL FROM MatHang_HD
+                    GROUP BY H_ID
+                    --</B2>
+                ) AS BANG8
+                WHERE BANG8.SL = @MHLN
+                -- </B3>
+            )
+            --</B4>
+        )
+        --</B5>
+        
+-- tìm xem shipper nào hoạt động nhiều nhất(giao được nhiều hàng nhất) trong tháng
+
 ---------------------------------------------------------------------------------------------------------------
     --CREATE or ALTER VIEW VIEWALL AS 
         SELECT 
             h.B_ID,
             m.H_ID,
+            MH.P_ID,
             mh.TEN_MAT_HANG,
             h.C_ID,
             m.SO_LUONG,
