@@ -494,13 +494,14 @@
         SELECT * from KhachHang
         WHERE DAY(NGAY_SINH) = DAY(Getdate()) and MONTH(NGAY_SINH) = MONTH(GETDATE())
 
--- tìm xem cuahang nào có mặt hàng là tiêu thụ mạnh nhất
-        --CREATE OR ALTER PROCEDURE _MVP_ AS
+-- tìm xem cuahang nào có mặt hàng tiêu thụ mạnh nhất
+        --CREATE OR ALTER PROCEDURE _MVP_ @when VARCHAR(10) AS
         -- tìm số lượng bán được của mặt hàng chiếm lượng tiêu thụ lớn nhất:
         --<B1>: tìm số lượng bán ra nhiều nhất trong tất cả mặt hàng là bao nhiêu
         DECLARE @MHLN INT = (
             SELECT MAX(BANG7.SL) AS MAX_SL FROM(
-                SELECT H_ID, SUM(SO_LUONG) AS SL FROM MatHang_HD
+                SELECT H_ID, SUM(SO_LUONG) AS SL FROM VIEWALL
+                WHERE CONVERT(char,THOI_GIAN_DAT_HANG,103) LIKE @when
                 GROUP BY H_ID
             ) AS BANG7
         )
@@ -515,7 +516,8 @@
                 -- <B3>: Chọn các H_ID có tổng lượng hàng bán chạy nhất:
                 SELECT H_ID FROM(
                     --<B2>: tính tổng số lượng bán ra của mỗi mặt hàng
-                    SELECT H_ID, SUM(SO_LUONG) AS SL FROM MatHang_HD
+                    SELECT H_ID, SUM(SO_LUONG) AS SL FROM VIEWALL
+                    WHERE CONVERT(char,THOI_GIAN_DAT_HANG,103) LIKE @when
                     GROUP BY H_ID
                     --</B2>
                 ) AS BANG8
@@ -526,12 +528,56 @@
         )
         --</B5>
         
--- tìm xem shipper nào hoạt động nhiều nhất(giao được nhiều hàng nhất) trong tháng
-
+-- Danh sách mặt hàng không bán được trong tháng
+    --CREATE OR ALTER PROCEDURE DeadStock @when VARCHAR(10) AS  -- @when like : '%10/2021'
+        SELECT H_ID, TEN_MAT_HANG FROM MatHang
+        WHERE H_ID != ALL(
+            SELECT H_ID FROM
+            VIEWALL
+            WHERE CONVERT(char,THOI_GIAN_DAT_HANG,103)  LIKE  @when -- vì THOI_GIAN_DAT_HANG là kiểu datetime nên gặp rắc rối khi 
+            --                                                          dùng LIKE, vậy ta chuyển về định dạng dd/mm/yyyy
+        )
+-- tìm xem shipper nào hoạt động nhiều nhất(giao được nhiều đơn hàng nhất) trong tháng
+    --CREATE OR ALTER PROCEDURE _MVS_ @when VARCHAR(10) AS
+        DECLARE @MVS SMALLINT = (
+            SELECT MAX(SL) FROM(
+                SELECT COUNT(B_ID) AS SL FROM HoaDon
+                WHERE CONVERT(char,THOI_GIAN_DAT_HANG,103)  LIKE  @when
+                GROUP BY S_ID
+            ) AS MVS
+        )
+        SELECT S_ID, HO_VA_TEN FROM Shippers
+        WHERE S_ID = ANY(
+            SELECT S_ID FROM(
+                SELECT S_ID, COUNT(B_ID) AS SL FROM HoaDon
+                WHERE CONVERT(char,THOI_GIAN_DAT_HANG,103)  LIKE  @when
+                GROUP BY S_ID
+            ) AS MVS2
+            WHERE SL = @MVS
+        )
+-- tìm xem khách hàng nào có điểm tích lũy tăng nhiều nhất so với tháng trước(hay số đơn hàng mua nhiều nhất tháng):
+    --CREATE OR ALTER PROCEDURE _MVC_ @when VARCHAR(10) AS
+        DECLARE @MVC INT = (
+            SELECT MAX(MVC) FROM(
+                SELECT COUNT(B_ID) AS MVC FROM HoaDon
+                WHERE TRANG_THAI !=N'Đã hủy' AND CONVERT(char,THOI_GIAN_DAT_HANG,103)  LIKE  @when
+                GROUP BY C_ID
+            ) AS MVC
+        )
+        SELECT C_ID,HO_VA_TEN,SDT FROM KhachHang
+        WHERE C_ID = ANY(
+            SELECT C_ID FROM(
+                SELECT C_ID,COUNT(B_ID) AS MVC FROM HoaDon
+                WHERE TRANG_THAI !=N'Đã hủy' AND CONVERT(char,THOI_GIAN_DAT_HANG,103)  LIKE  @when
+                GROUP BY C_ID
+            ) AS MVC1
+            WHERE MVC = @MVC
+        ) 
 ---------------------------------------------------------------------------------------------------------------
     --CREATE or ALTER VIEW VIEWALL AS 
         SELECT 
             h.B_ID,
+            h.S_ID,
             m.H_ID,
             MH.P_ID,
             mh.TEN_MAT_HANG,
@@ -543,6 +589,7 @@
             h.PHI_SHIP_VND,
             h.TONG_TIEN,
             h.TRANG_THAI,
+            h.THOI_GIAN_DAT_HANG,
             h.DANH_GIA_DON_HANG,
             Month(h.THOI_GIAN_NHAN_HANG) AS THANG,
             YEAR(h.THOI_GIAN_NHAN_HANG) AS NAM
@@ -554,4 +601,4 @@
                     INNER JOIN
                         MatHang     AS mh 
                     on mh.H_ID = m.H_ID
-        )
+        ) WHERE h.TRANG_THAI != 'Đã hủy'

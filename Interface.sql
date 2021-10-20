@@ -2,12 +2,14 @@
 -- Xem khách hàng nào đạt được các mốc điểm 50,100,200,500 để thực hiện chương trình khuyến mại  
 SELECT * FROM KH_DiemTichLuy( 3 /*Mốc điểm*/)
 
--- Xem cửa hàng nào có mặt hàng bán chạy nhất:
-EXEC _MVP_
-
+-- Xem cửa hàng nào có mặt hàng bán chạy nhất tháng:
+EXEC _MVP_ @when = '%10/2021'
+-- Xem shipper nào hoạt động tích cực nhất tháng:
+EXEC _MVS_ @when = '%10/2021'
+-- tìm xem khách hàng nào có điểm tích lũy tăng nhiều nhất so với tháng trước(hay số đơn hàng mua nhiều nhất tháng):
+EXEC _MVC_ @when = '%10/2021'
 -- Tìm xem những khách hàng nào có ngày sinh hôm nay để áp dụng chương trình khuyến mãi
 EXEC Sinh_Nhat
-
 --Tìm mặt hàng có tên(gần giống) có đủ số lượng ít nhất mà khách hàng cần hay không
 EXEC Check_If_Available '%',2  ---(/*Tên hàng - Dùng được cả regular expression hay Wild card*/, /*Số lượng ít nhất cần tìm*/)
 
@@ -19,7 +21,7 @@ EXEC Update_ShipperFee -- Cửa hàng tính phí cố định theo thỏa thuậ
 
 EXEC NopPhi @ID=100, @Ob='s',@mth=10,@yr=2021 -- @ID,@Ob,@mth,@yr: Shipper chỉ có thể nộp phí cho tháng trước đó, tức là phải hết 1 tháng làm việc mới được nộp.
 
--- Xem những ai dang nợ tiền trong các tháng nhỏ hơn @thang
+-- Xem những ai đang nợ tiền trong các tháng nhỏ hơn @thang
 SELECT * FROM TON_NO( 10,2021 ) --@thang, @nam
 
 -- Xem mặt hàng nào bán chạy nhất trong @thang
@@ -46,21 +48,21 @@ EXEC Monthly_Revenue 10 --@thang
 
 -- Thêm hóa đơn cho khách hàng có mã là C_ID
 
- EXEC   ADD_BILL 
-      --@param:
-        @C_ID = 10 ,
-        @NGUOI_NHAN = N'Mai Ngọc Đoàn' , 
-        @DCGH = N'Hoàng Mai' ,
-        @STD = '0385779443', 
-        @PTTT , 
-        @GC
+         EXEC   ADD_BILL 
+        --@param:
+                @C_ID = 10 ,
+                @NGUOI_NHAN = N'test' , 
+                @DCGH = N'Hoàng Mai' ,
+                @STD = '0000000', 
+                @PTTT , 
+                @GC
         -- @PTTT & @GC có thể bỏ trống
         -- @C_ID, @NGUOI_NHAN, @DCGH buộc cả 3 có hoặc không có(không có thì để mặc định thông tin đối với khách hàng có @C_ID)
 
 -- Cập nhật mặt hàng có trong hóa đơn có B_ID
         EXEC Cap_nhat_mat_hang_trong_hoa_don
         --@param:
-                @B_ID = 111 ,
+                @B_ID = 112 ,
                 @H_ID = 101,
                 @amount = 2,
                 @command = 'end',                                        -- command : 'end','add' = default,'delete'
@@ -75,21 +77,21 @@ EXEC Monthly_Revenue 10 --@thang
         -- Trước khi đơn hàng chuyển trang trạng thái 'đang giao' thì khách hàng có thể thực hiện hủy đơn
         -- và đơn hàng đó được chuyển sang trạng thái 'hủy' và vẫn được lưu vào hệ thống.
         EXEC Customer_Cancel 
-                @WhichBill = 10 
+                @WhichBill = 112 
         -- Hủy đơn hàng ID=10
         SELECT * FROM MatHang_HD
--- Khi ai đó đưa hóa đơn từ trạng thái 'xử lý' sang 'chờ' thì shipper có thể xác nhận nhận đơn hàng đó.
-EXEC Shipper_Confirm_Bill
-        @Who = 1000, -- Mã id của shipper
-        @WhichBill = 111 --Đơn hàng có mã nào
-        -- Hóa đơn sang trạng thái 'đang giao'
-SELECT * from Shippers
+-- Khi khách hàng đưa hóa đơn từ trạng thái 'xử lý' sang 'chờ' thì shipper có thể xác nhận nhận đơn hàng đó.
+        EXEC Shipper_Confirm_Bill
+                @Who = 1000, -- Mã id của shipper
+                @WhichBill = 111 --Đơn hàng có mã nào
+                -- Hóa đơn sang trạng thái 'đang giao'
+SELECT * from Shippers 
 
 -- Khách hàng nhận được hàng, chỉ được xác nhận và đánh giá đơn hàng 1 lần
-EXEC Customer_Received
-        @WhichBill = 111 ,      -- mã đơn hàng đã nhận được
-        @TinhTrang = N'ok em',  -- để lại đánh giá đơn hàng, tình trạng khi nhận được
-        @danhgia   = 5          -- đánh giá cho shipper
+        EXEC Customer_Received
+                @WhichBill = 111 ,      -- mã đơn hàng đã nhận được
+                @TinhTrang = N'ok em',  -- để lại đánh giá đơn hàng, tình trạng khi nhận được
+                @danhgia   = 5          -- đánh giá cho shipper
         -- Khi khách hàng thực hiện xác nhận thì:
         --  +, Khách hàng được cộng 1 điểm tích lũy.
         --  +, Shipper được tính trung bình đánh giá cho mình
