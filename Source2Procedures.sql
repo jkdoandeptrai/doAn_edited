@@ -328,19 +328,27 @@
         SET TRANG_THAI = N'Đã giao', THOI_GIAN_NHAN_HANG = GETDATE(), TINH_TRANG_DON_HANG = @TinhTrang, DANH_GIA_DON_HANG = @danhgia
            WHERE B_ID = @WhichBill AND TRANG_THAI = N'Đang giao'
         -- khách hàng nhận hàng thành công -> cộng 1 điểm tích lũy:
-            UPDATE KhachHang
-            SET DIEM_TICH_LUY = DIEM_TICH_LUY + 1
-            WHERE C_ID = @KH
-        -- tương tự với shippers, cập nhật đánh giá trung bình:
-            UPDATE Shippers
-                SET Shippers.DANH_GIA = DanhGia.DANH_GIA
-            FROM (
-                SELECT S_ID, AVG( DANH_GIA_DON_HANG ) as DANH_GIA 
-                from HoaDon
-                WHERE S_ID = @SID
-                GROUP BY S_ID 
-            ) as DanhGia
-            WHERE Shippers.S_ID = @SID
+        DECLARE @TTH NVARCHAR(50) = (
+            SELECT TRANG_THAI FROM HoaDon WHERE B_ID = @WhichBill
+        )
+        IF @TTH != N'Đã giao'
+            BEGIN
+                UPDATE KhachHang
+                SET DIEM_TICH_LUY = DIEM_TICH_LUY + 1
+                WHERE C_ID = @KH
+            -- tương tự với shippers, cập nhật đánh giá trung bình:
+                UPDATE Shippers
+                    SET Shippers.DANH_GIA = DanhGia.DANH_GIA
+                FROM (
+                    SELECT S_ID, AVG( DANH_GIA_DON_HANG ) as DANH_GIA 
+                    from HoaDon
+                    WHERE S_ID = @SID
+                    GROUP BY S_ID 
+                ) as DanhGia
+                WHERE Shippers.S_ID = @SID
+            END
+        ELSE
+            SELECT N'Don hang da duoc xac nhan roi!' AS ERORR
 
 -- Khách hàng hủy đơn hàng có mã @WhichBill với điều kiện TRANG_THAI = N'Chờ xác nhận'
     --CREATE OR ALTER PROCEDURE Customer_Cancel 
@@ -371,8 +379,8 @@
 
 -- Nộp tiền phí:
 
-    --CREATE OR ALTER PROCEDURE NopPhi 
-        @ID_Phi TINYINT,
+    -- CREATE OR ALTER PROCEDURE NopPhi 
+        @ID_Phi INT,
         @Who CHAR ,
         @month TINYINT,
         @year SMALLINT AS
@@ -396,37 +404,43 @@
             --                    1: Không tồn tại @thang, @ID_Phi trong database
             --                    2: @ID_Phi trong @thang đã nộp tiền phí 
             --                    3: @ID_Phi trong @thang chưa nộp tiền phí 
-
-        IF ( LOWER(@who) = 's' ) and @check != ''                                  
-            BEGIN
-                IF @check = N'Chưa nộp'  --- sau này thêm điều kiện check: @month < Month(Getdate()) để đảm bảo hết tháng shipper mới nộp được
-                    BEGIN
-                        UPDATE PhiShippers
-                            SET TRANG_THAI = N'Đã nộp', THOI_GIAN_NOP = GETDATE()
-                        WHERE FS_ID = @ID_Phi and THANG = @month and NAM = @year
-                        SELECT N'Đã nộp thành công.' AS SUCCESS
-                    END
-                ELSE
-                    SELECT N'Bạn đã nộp rồi!' AS SHIPPER_DA_NOP
-            END
+        IF (@month < MONTH(GETDATE()) and @year = YEAR(GETDATE()) )-- Dành cho những tháng nhỏ hơn 11.
+            or @year < YEAR(GETDATE())
+        BEGIN
+            IF ( LOWER(@who) = 's' ) and @check != ''                                  
+                BEGIN
+                    IF @check = N'Chưa nộp'
+                        BEGIN
+                            UPDATE PhiShippers
+                                SET TRANG_THAI = N'Đã nộp', THOI_GIAN_NOP = GETDATE()
+                            WHERE FS_ID = @ID_Phi and THANG = @month and NAM = @year
+                            SELECT N'Đã nộp thành công.' AS SUCCESS
+                        END
+                    ELSE
+                        SELECT N'Bạn đã nộp rồi!' AS SHIPPER_DA_NOP
+                END
+            ELSE
+                BEGIN
+                    IF (LOWER(@who) = 'p') and @check1 != ''   
+                        BEGIN
+                            IF @check1 = N'Chưa nộp'
+                                BEGIN
+                                    UPDATE PhiCuaHang
+                                        SET TRANG_THAI = N'Đã nộp',THOI_GIAN_NOP = GETDATE()
+                                    WHERE FP_ID = @ID_Phi and THANG = @month and NAM = @year 
+                                    SELECT N'Đã nộp thành công.' AS SUCCESS
+                                END
+                            ELSE
+                                SELECT N'Bạn đã nộp rồi!' AS CUA_HANG_DA_NOP
+                        END
+                    ELSE
+                        SELECT N'Có lỗi xảy ra, xin vui lòng thử lại.' AS ERORR
+                END
+        END
         ELSE
-            BEGIN
-                IF (LOWER(@who) = 'p') and @check1 != ''   
-                    BEGIN
-                        IF @check1 = N'Chưa nộp'
-                            BEGIN
-                                UPDATE PhiCuaHang
-                                    SET TRANG_THAI = N'Đã nộp',THOI_GIAN_NOP = GETDATE()
-                                WHERE FP_ID = @ID_Phi and THANG = @month and NAM = @year 
-                                SELECT N'Đã nộp thành công.' AS SUCCESS
-                            END
-                        ELSE
-                            SELECT N'Bạn đã nộp rồi!' AS CUA_HANG_DA_NOP
-                    END
-                ELSE
-                    SELECT N'Có lỗi xảy ra, xin vui lòng thử lại.' AS ERORR
-            END
-
+        BEGIN
+            SELECT N'Ban chua den thoi han phai nop phi, quay lai vao thang sau!' AS ERORR
+        END
 
 
 -- Tính số tiền công ty đã nhận được từ việc nộp phí của Shipper và CuaHang
@@ -451,11 +465,12 @@
     RETURNS TABLE 
     AS  
         RETURN
-            SELECT PHI_ID,bang1.ID,TEN,THANG
+            SELECT PHI_ID,bang1.ID,TEN,THANG, TIEN_PHI_THANG as PHI_CON_NO
             from(
-                Select FS_ID AS PHI_ID,S_ID AS ID,THANG,NAM,TRANG_THAI from PhiShippers
+                Select FS_ID AS PHI_ID,S_ID AS ID,THANG,NAM,TRANG_THAI, TIEN_PHI_THANG from PhiShippers
                 UNION
-                SELECt FP_ID AS PHI_ID, P_ID AS ID,THANG,NAM,TRANG_THAI FROM PhiCuaHang
+                SELECt FP_ID AS PHI_ID, P_ID AS ID,THANG,NAM,TRANG_THAI, TIEN_PHI_THANG FROM PhiCuaHang
+                )
                 AS bang1
                 INNER JOIN(
                     SELECT S_ID AS ID, HO_VA_TEN  AS TEN FROM Shippers
@@ -463,7 +478,7 @@
                     SELECT P_ID,TEN_CUA_HANG from CuaHang
                 ) AS bang2
                 ON bang1.ID = bang2.ID
-            WHERE TRANG_THAI = N'Chưa nộp' AND THANG < @thang and NAM <= @year
+            WHERE TRANG_THAI = N'Chưa nộp' AND THANG <= @thang and NAM <= @year
 
 
  --Đưa ra danh sách khách hàng có điểm tích lũy đạt các mốc: 50,100,200,500
@@ -555,7 +570,7 @@
             ) AS MVS2
             WHERE SL = @MVS
         )
--- tìm xem khách hàng nào có điểm tích lũy tăng nhiều nhất so với tháng trước(hay số đơn hàng mua nhiều nhất tháng):
+-- tìm xem khách hàng nào có điểm tích lũy tăng nhiều nhất (hay số đơn hàng mua nhiều nhất tháng):
     --CREATE OR ALTER PROCEDURE _MVC_ @when VARCHAR(10) AS
         DECLARE @MVC INT = (
             SELECT MAX(MVC) FROM(
@@ -573,6 +588,15 @@
             ) AS MVC1
             WHERE MVC = @MVC
         ) 
+    -- --CREATE OR ALTER PROCEDURE SortByFee @month INT, @year INT AS
+    -- SELECT *  FROM (
+    --     SELECT Shippers.S_ID, FS_ID, HO_VA_TEN,THANG, NAM, SO_TIEN_KIEM_DUOC_TRONG_THANG FROM
+    --     PhiShippers
+    --     INNER JOIN Shippers
+    --     ON PhiShippers.S_ID = Shippers.S_ID
+    --     WHERE THANG = @month and NAM = @year
+    --     ORDER BY SO_TIEN_KIEM_DUOC_TRONG_THANG DESC
+    -- ) as temp
 ---------------------------------------------------------------------------------------------------------------
     --CREATE or ALTER VIEW VIEWALL AS 
         SELECT 

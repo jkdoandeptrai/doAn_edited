@@ -1,6 +1,6 @@
 /*
     * Đồ án hệ cơ sở dữ liệu nhóm 9, lớp 65IT6
-    * Thành Viên: Mai Ngọc Đoàn; Vũ Tiến Dũng(IT3), Vũ Tiến Dũng(IT6), Ninh Thị Thu Hà
+    * Thành Viên: Mai Ngọc Đoàn, Vũ Tiến Dũng(IT3), Vũ Tiến Dũng(IT6), Ninh Thị Thu Hà
     * Đoạn code dưới đây mô tả cấu trúc các bảng dữ liệu
     * cài đặt tên SQL server.
 */
@@ -17,9 +17,9 @@
 -- DROP TABLE PhiShippers
 -- DROP TABLE HoaDon
 
+-- Tổng 11 bảng
 
-
--- Bang Shippers:
+-- Bảng Shippers:
 /* 
     S_ID: bắt đầu bằng 1000, tự động tăng thêm 1 khi có bản ghi mới được thêm vào
     DANH_GIA : nằm trong đoạn từ 1 - 5, mặc định mỗi shipper mới có DANH_GIA = 3

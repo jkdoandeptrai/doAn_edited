@@ -1,0 +1,76 @@
+Phần 1: 
+    1, Mục tiêu thiết kế hệ thống:
+        a, Tạo bảng lưu trữ dữ liệu.
+            - Tạo được 9 bảng quan hệ, bao gồm:
+                -- KhachHang
+                    Lưu trữ thông tin khách hàng.
+                -- Shippers
+                    Lưu trữ thông tin của shipper.
+                -- HoaDon
+                    Lưu trữ thông tin hóa đơn.
+                -- MatHang_HD
+                    Lưu trữ chi tiết các mặt hàng có trong hóa đơn.
+                -- CuaHang
+                    Lưu trữ thông tin các cửa hàng liên kết
+                -- CoSoCH
+                    Lưu địa chỉ của cửa hàng, và mỗi cửa hàng có thể có nhiều
+                    cơ sở.
+                -- MatHang
+                    Lưu những mặt hàng do mỗi cửa hàng cung cấp
+                -- PhiCuaHang
+                    Lưu trữ, tính toán tiền phí mà cửa hàng phải trả
+                    cho công ty (hiện tại tiền phí mỗi tháng là tính theo thỏa thuận, là một số cố định). 
+                -- PhiShippers
+                    Tính toán số tiền shipper kiếm được trong mỗi tháng, và chiết khấu 30% số tiền đó
+                    làm tiền phí trả cho công ty.
+        b, Các truy vấn mong muốn hệ thống làm được.
+            - Thêm, sửa, xóa thông tin cho các đối tượng.
+            - Tìm kiếm các thông tin ví dụ như mặt hàng, hóa đơn, khách hàng,...
+            - Tính toán, thống kê các dữ liệu (số tiền công ty kiếm được trong tháng, 
+                mặt hàng bán chạy nhất, nhân viên hoạt động tốt nhất...)
+            - Tự động cập nhật thông tin cần thiết khi có sự thay đổi nào đó trên hệ thống, VD:
+                + Có thêm một hóa đơn mới -> tính tiền cho hóa đơn
+                + Shipper nhận đơn hàng -> thay đổi trạng thái của đơn hàng thành 'đang giao'.
+                + Khách hàng nhận hàng và đánh giá nhân viên -> Khách hàng được cộng 1 điểm tích lũy, 
+                    shipper được tăng một đơn hàng và cộng tiền ship và số tiền kiếm được, cộng tiền phí...
+                + Nếu khách hàng yêu cầu một hóa đơn nhưng không có mặt hàng nào thì tự hủy hóa đơn đó đi 
+                    (thường xảy ra khi khách hàng đặt hàng trên app.)
+        c, Cách giải quyết:
+            - Tạo procedures cho lưu truy vấn cho mỗi yêu cầu, khi cần chỉ cần gọi procedure đó ra.
+            - Đối với quy trình bắt đầu từ lúc khách hàng tạo một đơn hàng cho đến lúc khách hàng nhận hàng:
+                + Mỗi một giai đoạn sẽ có một procedure riêng để thực hiện thao tác:
+                    * khách tạo một hóa đơn rỗng (**)
+                    * khách thêm thông tin hóa đơn của mình (**)
+                    * khách thêm các mặt hàng vào trong hóa đơn (**)
+                    * khách xác nhận đơn hàng, đồng ý kết thúc việc nhập (**)
+                    * Shipper lựa chọn hóa đơn phù hợp với mình để nhận giao
+                    * Khách hàng nhận hàng khi shipper giao hàng đến
+                    * Khách hàng xác nhận và đánh giá cho shipper
+                (**) : phần này nếu khách đặt trên app sẽ thực hiện, nếu không nhân viên cskh sẽ thực hiện
+                    -> kết thúc quá trình.
+Phần 2: Cac van de he thong da lam duoc
+    1 : Thêm một khách hàng, thêm hóa đơn, cập nhật hóa đơn(thông tin), cập 
+        nhật thông tin chi tiết hóa đơn, xác nhận đơn hàng, nhận hàng, đánh giá.
+    2 : Thêm một shipper, cửa hàng liên kết.
+    3 : Cập nhật shipper mới và cửa hàng mới vào
+        bảng tính phí
+    4 : Tính phí cho shippers (cửa hàng mặc định lấy giá phí theo thỏa thuận
+        do đó sẽ không có tính phí cho cửa hàng theo cách tính của shippers)
+        Và Nộp phí cho shippper.
+    5 : Xem khách hàng nào đạt được mốc điểm 50/100/200 (mốc điểm tùy chọn)
+    6 : Xem cửa hàng nào có mặt hàng bán chạy nhất tháng.
+    7 : Xem shipper nào hoạt động tích cực nhất ( có số đơn hàng cao nhất trong tháng) 
+    8 : Xem khách hàng nào mua nhiều đơn hàng nhất trong tháng.
+    9 : Tìm khách hàng có ngày sinh nhật vào mỗi ngày (có chương trình tri ân, khuyến mại).
+    10 : Check xem liệu mặt hàng xyz(hoặc trong tên có chứa "xyz") có còn trong hệ thống hay không.
+    11 : Kiểm tra shippers, cửa hàng đang nợ tiền phí.
+    12 : Kiểm tra mặt hàng bán chạy nhất tháng.
+    13 : Xem mặt hàng không bán được trong tháng
+    14 : Tính tổng số tiền công ty đã nhận được từ việc trả tiền phí của shippers và cửa hàng
+        (không kể phần chưa nộp)
+
+
+    
+->  Hiện tại hệ thống đã làm được hầu hết những yêu cầu về truy vấn dữ liệu do nhóm 9 đề ra,
+    hy vọng cô và các bạn đóng góp cho nhóm 9 thêm những gợi ý để hoàn thiện hơn. Xin cảm ơn mọi người.
+    
