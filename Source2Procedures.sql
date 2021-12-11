@@ -1,7 +1,7 @@
 ----------------------------------------Cài đặt database đồ án của nhóm 9--------------------
 
 --Cập nhật ID của CuaHang mới trong hệ thống vào bảng PhiCuaHang:
-    --CREATE OR ALTER PROCEDURE ADD_Phi AS
+    --CREATE OR ALTER PROCEDURE Add_Phi AS
         -- cửa hàng
         INSERT INTO 
         PhiCuaHang(P_ID)
@@ -74,7 +74,7 @@
 
 
 -- Tạo một hóa đơn mới :
-    --CREATE OR ALTER PROCEDURE ADD_BILL 
+    --CREATE OR ALTER PROCEDURE Create_Bill 
         @C_ID SMALLINT,
         @NGUOI_NHAN NVARCHAR(30) =  N'', 
         @DCGH NVARCHAR(60) = '',
@@ -147,7 +147,7 @@
 
 -- Ghi các mặt hàng có trong hóa đơn vào bảng MatHang_HD, hay 'thêm vào giỏ hàng'
 
-    --CREATE OR ALTER PROCEDURE Cap_nhat_mat_hang_trong_hoa_don
+    --CREATE OR ALTER PROCEDURE Push_Item
         @B_ID SMALLINT, 
         @H_ID SMALLINT = -1,
         @amount TINYINT = 1,
@@ -161,11 +161,11 @@
                     Khách hàng khi đã thêm hóa đơn nhưng lại thay đổi ý định và xóa mặt hàng đó ra khỏi hóa đơn vì một vài lý do
                     khách hàng xác nhận command = 'end' với trạng thái không có mặt hàng nào trong hóa đơn
                 Ví dụ các cặp value - command hợp lệ(thường có):
-                EXEC   Cap_nhat_mat_hang_trong_hoa_don @B_ID = 100, @H_ID =100, @command = 'add' // thêm mặt hàng 100 và hóa đơn mã 100, số lượng =1 
-                EXEC   Cap_nhat_mat_hang_trong_hoa_don @B_ID = 100, @H_ID =100,@amount = n, @command = 'add' // thêm mặt hàng 100 và hóa đơn mã 100, số lượng = n
-                EXEC   Cap_nhat_mat_hang_trong_hoa_don @B_ID = 100, @H_ID =100,@amount = n // thêm mặt hàng 100 và hóa đơn mã 100, số lượng = n
-                EXEC   Cap_nhat_mat_hang_trong_hoa_don @B_ID = 100,@phiship = 30000,@command = 'end' // kết kết thúc hóa đơn, phí ship là 30000
-                EXEC   Cap_nhat_mat_hang_trong_hoa_don @B_ID = 100,@H_ID = 101, @command = 'delete' // xóa mặt hàng 101 khỏi hóa đơn 100
+                EXEC   Push_Item @B_ID = 100, @H_ID =100, @command = 'add' // thêm mặt hàng 100 và hóa đơn mã 100, số lượng =1 
+                EXEC   Push_Item @B_ID = 100, @H_ID =100,@amount = n, @command = 'add' // thêm mặt hàng 100 và hóa đơn mã 100, số lượng = n
+                EXEC   Push_Item @B_ID = 100, @H_ID =100,@amount = n // thêm mặt hàng 100 và hóa đơn mã 100, số lượng = n
+                EXEC   Push_Item @B_ID = 100,@phiship = 30000,@command = 'end' // kết kết thúc hóa đơn, phí ship là 30000
+                EXEC   Push_Item @B_ID = 100,@H_ID = 101, @command = 'delete' // xóa mặt hàng 101 khỏi hóa đơn 100
         */
         -- Khai báo các biến số cần có
             DECLARE @soluonghangconlai TINYINT = (
@@ -290,7 +290,7 @@
 
 
 --Shipper xác nhận đơn:
-    --CREATE OR ALTER PROCEDURE Shipper_Confirm_Bill
+    --CREATE OR ALTER PROCEDURE Shipper_Confirms_Bill
         @Who SMALLINT, 
         @WhichBill SMALLINT AS
         /* 
@@ -306,7 +306,7 @@
 -----------------------------------------------------------------------------------------------------------------------------------------------------
 
  -- Khách hàng nhận hàng:
-    --CREATE OR ALTER PROCEDURE Customer_Received 
+    --CREATE OR ALTER PROCEDURE Customer_Receives
         @WhichBill SMALLINT, 
         @TinhTrang NVARCHAR(50), 
         @danhgia TINYINT 
@@ -351,7 +351,7 @@
             SELECT N'Don hang da duoc xac nhan roi!' AS ERORR
 
 -- Khách hàng hủy đơn hàng có mã @WhichBill với điều kiện TRANG_THAI = N'Chờ xác nhận'
-    --CREATE OR ALTER PROCEDURE Customer_Cancel 
+    --CREATE OR ALTER PROCEDURE Customer_Cancels
         @WhichBill SMALLINT AS
 
             DECLARE @TrangThai NVARCHAR(20) = (
@@ -461,7 +461,7 @@
 
 --Đưa ra danh sách các khách hàng, shipper, chưa nộp phí dịch vụ trong tháng
     --- Gồm các shipper + Cửa hàng chưa nộp phí trong những tháng < @thang
-    --CREATE OR ALTER FUNCTION TON_NO(@thang INT,@year SMALLINT)
+    --CREATE OR ALTER FUNCTION Over_Due (@thang INT,@year SMALLINT)
     RETURNS TABLE 
     AS  
         RETURN
@@ -482,7 +482,7 @@
 
 
  --Đưa ra danh sách khách hàng có điểm tích lũy đạt các mốc: 50,100,200,500
-    --CREATE OR ALTER  FUNCTION KH_DiemTichLuy(@diem INT)
+    --CREATE OR ALTER  FUNCTION Reward_Points(@diem INT)
         RETURNS TABLE AS RETURN(
             SELECT * FROM dbo.KhachHang
             WHERE DIEM_TICH_LUY = @diem  -- Số điểm mốc cần truy cứu
@@ -544,7 +544,7 @@
         --</B5>
         
 -- Danh sách mặt hàng không bán được trong tháng
-    --CREATE OR ALTER PROCEDURE DeadStock @when VARCHAR(10) AS  -- @when like : '%10/2021'
+    --CREATE OR ALTER PROCEDURE Dead_Stock @when VARCHAR(10) AS  -- @when like : '%10/2021'
         SELECT H_ID, TEN_MAT_HANG FROM MatHang
         WHERE H_ID != ALL(
             SELECT H_ID FROM
@@ -588,6 +588,8 @@
             ) AS MVC1
             WHERE MVC = @MVC
         ) 
+
+    /** KHÔNG CHẠY PHẦN NÀY NHÉ!
     -- --CREATE OR ALTER PROCEDURE SortByFee @month INT, @year INT AS
     -- SELECT *  FROM (
     --     SELECT Shippers.S_ID, FS_ID, HO_VA_TEN,THANG, NAM, SO_TIEN_KIEM_DUOC_TRONG_THANG FROM
@@ -597,6 +599,37 @@
     --     WHERE THANG = @month and NAM = @year
     --     ORDER BY SO_TIEN_KIEM_DUOC_TRONG_THANG DESC
     -- ) as temp
+    **/
+    -- tìm lượng phân bố mua hàng trong năm qua từng tháng.
+    -- hay mỗi tháng có bao nhiêu lượt mua hàng
+    --CREATE OR ALTER PROCEDURE MONTHLY_DISTRIBUTION @year INT AS
+    SELECT MONTH(THOI_GIAN_DAT_HANG) as [Month], COUNT(MONTH(THOI_GIAN_DAT_HANG)) as Freq 
+        FROM HoaDon
+        WHERE YEAR(THOI_GIAN_DAT_HANG) = @year
+        GROUP BY MONTH(THOI_GIAN_DAT_HANG)
+        ORDER BY [Month] DESC
+    -- tìm lượng phân bố thời điểm mua hàng.
+    -- hay trong mỗi tháng thì số lượng người mua hàng là bao nhiêu đối với mỗi ngày trong tuần từ thứ 2 đến
+    -- chủ nhật
+    --CREATE OR ALTER PROCEDURE MONTHLY_DISTRIBUTION_BY_WEEKDAY @year INT AS
+    SELECT MONTH(THOI_GIAN_DAT_HANG) AS MONTH, DATENAME(WEEKDAY, THOI_GIAN_DAT_HANG)  AS WD_NAME,
+        COUNT(DATENAME(WEEKDAY, THOI_GIAN_DAT_HANG)) AS Freq FROM HoaDon
+        WHERE YEAR(THOI_GIAN_DAT_HANG) = @year
+        GROUP BY DATENAME(WEEKDAY, THOI_GIAN_DAT_HANG), MONTH(THOI_GIAN_DAT_HANG)
+        ORDER BY MONTH(THOI_GIAN_DAT_HANG) ASC
+    
+    -- với mỗi tháng, trung bình mỗi khách hàng bỏ ra bao nhiêu để mua sắm.
+    --CREATE OR ALTER PROCEDURE Avg_per_Month AS
+    SELECT* FROM HoaDon
+
+    SELECT MONTH(THOI_GIAN_DAT_HANG) AS [MONTH], AVG(TONG_TIEN) AS [AVG] FROM HoaDon
+    GROUP BY MONTH(THOI_GIAN_DAT_HANG)
+
+    -- trung bình một năm mỗi khách hàng bỏ ra bao nhiêu cho việc mua sắm.
+    CREATE OR ALTER PROCEDURE Avg_Spend_per_Year AS
+    SELECT YEAR(THOI_GIAN_DAT_HANG) AS [YEAR], AVG(TONG_TIEN) AS [AVG] FROM HoaDon
+    WHERE YEAR(THOI_GIAN_DAT_HANG) = YEAR(GETDATE())
+    GROUP BY YEAR(THOI_GIAN_DAT_HANG)
 ---------------------------------------------------------------------------------------------------------------
     --CREATE or ALTER VIEW VIEWALL AS 
         SELECT 

@@ -1,6 +1,6 @@
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 -- Xem khách hàng nào đạt được các mốc điểm 50,100,200,500 để thực hiện chương trình khuyến mại  
-SELECT * FROM KH_DiemTichLuy( 0 /*Mốc điểm*/)
+SELECT * FROM Reward_Points( 0 /*Mốc điểm*/)
 Select* from KhachHang
 -- Xem cửa hàng nào có mặt hàng bán chạy nhất tháng:
 EXEC _MVP_ @when = '%10/2021'
@@ -14,7 +14,7 @@ EXEC Sinh_Nhat
 EXEC Check_If_Available '%Coca&',10  ---(/*Tên hàng - Dùng được cả regular expression (hay Wild card)*/, /*Số lượng ít nhất cần tìm*/)
 Select* from MatHang
 -- thêm các cửa hàng, shipper vào bảng tính phí.
-EXEC ADD_Phi
+EXEC Add_Phi
 
 -- Tính phí cho Shipper
 EXEC Update_ShipperFee -- Cửa hàng tính phí cố định theo thỏa thuận, không phụ thuộc vào đơn hàng nên không cần cập nhật dạng này.
@@ -22,14 +22,32 @@ EXEC Update_ShipperFee -- Cửa hàng tính phí cố định theo thỏa thuậ
 EXEC NopPhi 102, 's',10,2021 -- @ID,@Ob,@mth,@yr: Shipper chỉ có thể nộp phí cho tháng trước đó, tức là phải hết 1 tháng làm việc mới được nộp.
 Select* from PhiShippers
 -- Xem những ai đang nợ tiền trong các tháng nhỏ hơn @thang
-SELECT * FROM TON_NO( 12,2021 ) --@thang, @nam
+SELECT * FROM Over_Due( 12,2021 ) --@thang, @nam
 -- Xem mặt hàng nào bán chạy nhất trong @thang
 EXEC Best_Selling 10 --@thang
 -- Xem mặt hàng không bán được trong tháng
-EXEC DeadStock @when = '%10/2021'
+EXEC Dead_Stock @when = '%10/2021'
 -- Xem tổng tiền mà công ty đã nhận được từ shipper và cửa hàng ( trừ những CH, SP nào chưa gửi tiền)
 EXEC Monthly_Revenue 10 --@thang
 -- tự động lấy năm là năm hiện tại -> không cần nhập năm.
+
+
+-- new:
+    -- tìm lượng phân bố mua hàng trong năm qua từng tháng.
+    -- hay mỗi tháng có bao nhiêu lượt mua hàng
+EXEC MONTHLY_DISTRIBUTION @year = 2021
+
+    -- tìm lượng phân bố thời điểm mua hàng.
+    -- hay trong mỗi tháng thì số lượng người mua hàng là bao nhiêu đối với mỗi ngày trong tuần từ thứ 2 đến
+    -- chủ nhật
+EXEC MONTHLY_DISTRIBUTION_BY_WEEKDAY @year = 2021
+
+-- với mỗi tháng, trung bình mỗi khách hàng bỏ ra bao nhiêu để mua sắm.
+EXEC Avg_per_Month
+
+-- trung bình một năm mỗi khách hàng bỏ ra bao nhiêu cho việc mua sắm.
+EXEC Avg_Spend_per_Year
+
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
@@ -46,7 +64,7 @@ EXEC Monthly_Revenue 10 --@thang
         SELECT * FROM KhachHang
 
 -- Thêm hóa đơn cho khách hàng có mã là C_ID
-         EXEC   ADD_BILL 
+         EXEC   Create_Bill 
         --@param:
                 @C_ID= 13 ,
                 @NGUOI_NHAN= N'Mai Ngoc Doan' , 
@@ -58,7 +76,7 @@ EXEC Monthly_Revenue 10 --@thang
         -- @C_ID, @NGUOI_NHAN, @DCGH buộc cả 3 có hoặc không có(không có thì để mặc định thông tin đối với khách hàng có @C_ID)
 Select* from HoaDon
 -- Cập nhật mặt hàng có trong hóa đơn có B_ID
-        EXEC Cap_nhat_mat_hang_trong_hoa_don
+        EXEC Push_Item
         --@param:
                 @B_ID= 117 ,
                 -- @H_ID = 101,
@@ -86,7 +104,7 @@ Select* from HoaDon
 SELECT * from Shippers 
 
 -- Khách hàng nhận được hàng, chỉ được xác nhận và đánh giá đơn hàng 1 lần
-        EXEC Customer_Received
+        EXEC Customer_Receives
                 @WhichBill = 117 ,      -- mã đơn hàng đã nhận được
                 @TinhTrang = N'Tốt',  -- để lại đánh giá đơn hàng, tình trạng khi nhận được
                 @danhgia   = 5          -- đánh giá cho shipper
